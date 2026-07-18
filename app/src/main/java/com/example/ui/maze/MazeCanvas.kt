@@ -3,6 +3,7 @@ package com.example.ui.maze
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,8 @@ fun MazeCanvas(
     trail: List<Pair<Int, Int>>,
     palette: MazeTierPalette,
     particles: List<Particle>,
+    controlScheme: ControlScheme = ControlScheme.SWIPE,
+    onSwipeMove: (dx: Int, dy: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val gridSize = grid.size
@@ -118,17 +121,46 @@ fun MazeCanvas(
         modifier = modifier
             .fillMaxSize()
             .onSizeChanged { containerSize = it }
-            .pointerInput(grid) {
-                // Support multi-touch pinching to zoom and dragging to pan
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.3f, 3.5f)
-                    
-                    // Prevent user from dragging map beyond screen boundaries too much
-                    val limitX = containerSize.width * 0.45f
-                    val limitY = containerSize.height * 0.45f
-                    val newX = (panOffset.x + pan.x).coerceIn(-limitX, limitX)
-                    val newY = (panOffset.y + pan.y).coerceIn(-limitY, limitY)
-                    panOffset = Offset(newX, newY)
+            .pointerInput(grid, controlScheme) {
+                if (controlScheme == ControlScheme.SWIPE) {
+                    var accumulatedDrag = Offset.Zero
+                    detectDragGestures(
+                        onDragStart = {
+                            accumulatedDrag = Offset.Zero
+                        },
+                        onDragEnd = {
+                            accumulatedDrag = Offset.Zero
+                        },
+                        onDragCancel = {
+                            accumulatedDrag = Offset.Zero
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulatedDrag += dragAmount
+                            val swipeThreshold = 50f // 50 pixels is a perfect standard swipe threshold
+                            if (java.lang.Math.abs(accumulatedDrag.x) > swipeThreshold || java.lang.Math.abs(accumulatedDrag.y) > swipeThreshold) {
+                                if (java.lang.Math.abs(accumulatedDrag.x) > java.lang.Math.abs(accumulatedDrag.y)) {
+                                    if (accumulatedDrag.x > 0) onSwipeMove(1, 0)
+                                    else onSwipeMove(-1, 0)
+                                } else {
+                                    if (accumulatedDrag.y > 0) onSwipeMove(0, 1)
+                                    else onSwipeMove(0, -1)
+                                }
+                                accumulatedDrag = Offset.Zero
+                            }
+                        }
+                    )
+                } else {
+                    // Support multi-touch pinching to zoom and dragging to pan in Joystick/D-pad mode
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.3f, 3.5f)
+                        
+                        val limitX = containerSize.width * 0.45f
+                        val limitY = containerSize.height * 0.45f
+                        val newX = (panOffset.x + pan.x).coerceIn(-limitX, limitX)
+                        val newY = (panOffset.y + pan.y).coerceIn(-limitY, limitY)
+                        panOffset = Offset(newX, newY)
+                    }
                 }
             }
     ) {

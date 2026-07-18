@@ -85,7 +85,7 @@ class MazeViewModel(
     var isDarkTheme by mutableStateOf(true) // default: dark theme
     var soundEnabled by mutableStateOf(true)
     var hapticEnabled by mutableStateOf(true)
-    var controlScheme by mutableStateOf(ControlScheme.SWIPE)
+    var controlScheme by mutableStateOf(ControlScheme.JOYSTICK)
     var minimapEnabled by mutableStateOf(true)
     var isTimeTrialMode by mutableStateOf(false)
 

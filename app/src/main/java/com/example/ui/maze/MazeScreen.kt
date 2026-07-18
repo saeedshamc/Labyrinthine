@@ -432,50 +432,7 @@ fun SettingsView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     }
                 }
 
-                Divider(color = palette.text.copy(alpha = 0.1f))
 
-                // Option 3: Controls Selector
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.SportsEsports, contentDescription = null, tint = palette.wallColor)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(text = Localization.getString("controls", lang), color = palette.text, fontSize = 16.sp)
-                    }
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(palette.wallColor.copy(alpha = 0.1f))
-                    ) {
-                        Text(
-                            text = Localization.getString("swipes", lang),
-                            color = if (viewModel.controlScheme == ControlScheme.SWIPE) Color.Black else palette.text,
-                            modifier = Modifier
-                                .background(if (viewModel.controlScheme == ControlScheme.SWIPE) palette.accent else Color.Transparent)
-                                .clickable { viewModel.controlScheme = ControlScheme.SWIPE }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                .testTag("control_swipe_switch"),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = Localization.getString("joystick", lang),
-                            color = if (viewModel.controlScheme == ControlScheme.JOYSTICK) Color.Black else palette.text,
-                            modifier = Modifier
-                                .background(if (viewModel.controlScheme == ControlScheme.JOYSTICK) palette.accent else Color.Transparent)
-                                .clickable { viewModel.controlScheme = ControlScheme.JOYSTICK }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                .testTag("control_joystick_switch"),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
 
                 Divider(color = palette.text.copy(alpha = 0.1f))
 
@@ -797,79 +754,34 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     )
                 }
 
-                // Quick Toggle Control Scheme & Dynamic Live Clock
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                // Dynamic Live Clock
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = borderStroke(0.5.dp, palette.wallColor.copy(alpha = 0.3f))
                 ) {
-                    IconButton(
-                        onClick = {
-                            viewModel.controlScheme = if (viewModel.controlScheme == ControlScheme.SWIPE) {
-                                ControlScheme.JOYSTICK
-                            } else {
-                                ControlScheme.SWIPE
-                            }
-                        },
-                        modifier = Modifier.padding(end = 4.dp).testTag("quick_toggle_controls_button")
-                    ) {
-                        Icon(
-                            imageVector = if (viewModel.controlScheme == ControlScheme.JOYSTICK) Icons.Default.SportsEsports else Icons.Default.TouchApp,
-                            contentDescription = "Toggle Control Scheme",
-                            tint = palette.wallColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(12.dp),
-                        border = borderStroke(0.5.dp, palette.wallColor.copy(alpha = 0.3f))
-                    ) {
-                        val tenths = (viewModel.gameTimeTicks % 10).toInt()
-                        val totalSec = (viewModel.gameTimeTicks / 10).toInt()
-                        Text(
-                            text = Localization.getString("timer", lang, totalSec, tenths),
-                            color = palette.text,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            modifier = Modifier
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                                .testTag("game_timer_ticks")
-                        )
-                    }
+                    val tenths = (viewModel.gameTimeTicks % 10).toInt()
+                    val totalSec = (viewModel.gameTimeTicks / 10).toInt()
+                    Text(
+                        text = Localization.getString("timer", lang, totalSec, tenths),
+                        color = palette.text,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .testTag("game_timer_ticks")
+                    )
                 }
             }
 
-            // Central Canvas Area supporting touch swipe triggers
+            // Central Canvas Area
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(palette.cardBg.copy(alpha = 0.2f))
-                    .border(0.5.dp, palette.wallColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                    .pointerInput(grid) {
-                        if (viewModel.controlScheme == ControlScheme.SWIPE) {
-                            detectDragGestures(
-                                onDragEnd = {},
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    // Identify swipe direction on drag threshold exceedance
-                                    val swipeThreshold = 15f
-                                    if (abs(dragAmount.x) > abs(dragAmount.y)) {
-                                        if (abs(dragAmount.x) > swipeThreshold) {
-                                            if (dragAmount.x > 0) viewModel.movePlayer(1, 0) // right
-                                            else viewModel.movePlayer(-1, 0) // left
-                                        }
-                                    } else {
-                                        if (abs(dragAmount.y) > swipeThreshold) {
-                                            if (dragAmount.y > 0) viewModel.movePlayer(0, 1) // down
-                                            else viewModel.movePlayer(0, -1) // up
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    },
+                    .border(0.5.dp, palette.wallColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 // Procedural maze drawing canvas
@@ -882,6 +794,8 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     trail = viewModel.playerTrail,
                     palette = palette,
                     particles = viewModel.activeParticles,
+                    controlScheme = viewModel.controlScheme,
+                    onSwipeMove = { dx, dy -> viewModel.movePlayer(dx, dy) },
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -907,17 +821,6 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     }
                 }
 
-                // Render Overlay Virtual Joystick D-Pad if preferred control
-                if (viewModel.controlScheme == ControlScheme.JOYSTICK) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 24.dp)
-                    ) {
-                        JoystickControls(viewModel = viewModel, palette = palette)
-                    }
-                }
-
                 // Render Time Trial Leaderboard Overlay
                 if (viewModel.isTimeTrialMode) {
                     LeaderboardOverlay(
@@ -931,6 +834,16 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Beautiful, fixed Virtual D-pad always at the bottom of the screen!
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                JoystickControls(viewModel = viewModel, palette = palette)
+            }
         }
 
         // LEVEL COMPLETE MODAL DIALOG
@@ -1006,10 +919,10 @@ fun MinimapCanvas(
 fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTierPalette) {
     Box(
         modifier = Modifier
-            .size(150.dp)
+            .size(170.dp)
             .clip(CircleShape)
-            .background(palette.cardBg.copy(alpha = 0.7f))
-            .border(1.5.dp, palette.wallColor.copy(alpha = 0.3f), CircleShape),
+            .background(palette.cardBg.copy(alpha = 0.8f))
+            .border(2.dp, palette.wallColor.copy(alpha = 0.35f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         // D-Pad North
@@ -1017,10 +930,10 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
             onClick = { viewModel.movePlayer(0, -1) },
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .size(44.dp)
+                .size(56.dp)
                 .testTag("joystick_up")
         ) {
-            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = palette.wallColor, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad East
@@ -1028,10 +941,10 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
             onClick = { viewModel.movePlayer(1, 0) },
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .size(44.dp)
+                .size(56.dp)
                 .testTag("joystick_right")
         ) {
-            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Right", tint = palette.wallColor, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Right", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad South
@@ -1039,10 +952,10 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
             onClick = { viewModel.movePlayer(0, 1) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .size(44.dp)
+                .size(56.dp)
                 .testTag("joystick_down")
         ) {
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = palette.wallColor, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad West
@@ -1050,19 +963,19 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
             onClick = { viewModel.movePlayer(-1, 0) },
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(44.dp)
+                .size(56.dp)
                 .testTag("joystick_left")
         ) {
-            Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Left", tint = palette.wallColor, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Left", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // Center Indicator Orb
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(38.dp)
                 .clip(CircleShape)
-                .background(palette.accent.copy(alpha = 0.2f))
-                .border(1.dp, palette.accent, CircleShape)
+                .background(palette.accent.copy(alpha = 0.25f))
+                .border(1.5.dp, palette.accent, CircleShape)
         )
     }
 }
