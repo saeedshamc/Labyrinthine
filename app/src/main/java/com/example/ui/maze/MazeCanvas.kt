@@ -5,8 +5,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -21,7 +29,15 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import com.example.data.MazeCell
 import com.example.ui.theme.MazeTierPalette
 import com.example.util.DifficultyCurve
@@ -80,6 +96,7 @@ fun MazeCanvas(
     // Manual Pan and Zoom Gesture Configuration
     var scale by remember { mutableStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Auto-adjust scale (zoom) based on difficulty level size
     val autoBaseScale = remember(gridSize) {
@@ -100,11 +117,18 @@ fun MazeCanvas(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { containerSize = it }
             .pointerInput(grid) {
                 // Support multi-touch pinching to zoom and dragging to pan
                 detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.18f, 2.5f)
-                    panOffset += pan
+                    scale = (scale * zoom).coerceIn(0.3f, 3.5f)
+                    
+                    // Prevent user from dragging map beyond screen boundaries too much
+                    val limitX = containerSize.width * 0.45f
+                    val limitY = containerSize.height * 0.45f
+                    val newX = (panOffset.x + pan.x).coerceIn(-limitX, limitX)
+                    val newY = (panOffset.y + pan.y).coerceIn(-limitY, limitY)
+                    panOffset = Offset(newX, newY)
                 }
             }
     ) {
@@ -208,6 +232,55 @@ fun MazeCanvas(
                         center = Offset(pCanvasX, pCanvasY)
                     )
                 }
+            }
+        }
+
+        // Floating Zoom Controls Overlay on the middle-right edge of the maze
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp)
+                .background(palette.cardBg.copy(alpha = 0.75f), RoundedCornerShape(12.dp))
+                .border(1.2.dp, palette.wallColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                .padding(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            IconButton(
+                onClick = { scale = (scale + 0.15f).coerceIn(0.3f, 3.5f) },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Zoom In",
+                    tint = palette.wallColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            IconButton(
+                onClick = { 
+                    scale = autoBaseScale
+                    panOffset = Offset.Zero
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CenterFocusStrong,
+                    contentDescription = "Reset Zoom",
+                    tint = palette.accent,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            IconButton(
+                onClick = { scale = (scale - 0.15f).coerceIn(0.3f, 3.5f) },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = "Zoom Out",
+                    tint = palette.wallColor,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }

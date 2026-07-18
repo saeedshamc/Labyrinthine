@@ -700,23 +700,45 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     )
                 }
 
-                // Dynamic Live Clock
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = borderStroke(0.5.dp, palette.wallColor.copy(alpha = 0.3f))
+                // Quick Toggle Control Scheme & Dynamic Live Clock
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val tenths = (viewModel.gameTimeTicks % 10).toInt()
-                    val totalSec = (viewModel.gameTimeTicks / 10).toInt()
-                    Text(
-                        text = Localization.getString("timer", lang, totalSec, tenths),
-                        color = palette.text,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        modifier = Modifier
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                            .testTag("game_timer_ticks")
-                    )
+                    IconButton(
+                        onClick = {
+                            viewModel.controlScheme = if (viewModel.controlScheme == ControlScheme.SWIPE) {
+                                ControlScheme.JOYSTICK
+                            } else {
+                                ControlScheme.SWIPE
+                            }
+                        },
+                        modifier = Modifier.padding(end = 4.dp).testTag("quick_toggle_controls_button")
+                    ) {
+                        Icon(
+                            imageVector = if (viewModel.controlScheme == ControlScheme.JOYSTICK) Icons.Default.SportsEsports else Icons.Default.TouchApp,
+                            contentDescription = "Toggle Control Scheme",
+                            tint = palette.wallColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = borderStroke(0.5.dp, palette.wallColor.copy(alpha = 0.3f))
+                    ) {
+                        val tenths = (viewModel.gameTimeTicks % 10).toInt()
+                        val totalSec = (viewModel.gameTimeTicks / 10).toInt()
+                        Text(
+                            text = Localization.getString("timer", lang, totalSec, tenths),
+                            color = palette.text,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                                .testTag("game_timer_ticks")
+                        )
+                    }
                 }
             }
 

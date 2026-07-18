@@ -1,21 +1,103 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# 🌌 LABYRINTH (لابـیـرنـت) - Neon Procedural Maze Engine
 
-# Run and deploy your AI Studio app
+[![Kotlin](https://img.shields.io/badge/Kotlin-1.9.0-purple.svg?style=flat&logo=kotlin)](https://kotlinlang.org)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack_Compose-M3-green.svg?style=flat&logo=android)](https://developer.android.com/jetpack/compose)
+[![Room Database](https://img.shields.io/badge/Room_DB-2.6.1-blue.svg?style=flat&logo=sqlite)](https://developer.android.com/training/data-storage/room)
+[![Platform](https://img.shields.io/badge/Platform-Android-3DDC84.svg?style=flat&logo=android)](https://developer.android.com/studio)
 
-This contains everything you need to run your app locally.
+**Labyrinth (لابیرنت)** is a premium, visually stunning, and highly optimized procedural maze puzzle application built entirely using **modern Jetpack Compose (Material 3)**, high-performance **2D Canvas rendering**, and the **Room Database** for local persistence.
 
-View your app in AI Studio: https://ai.studio/apps/2e1f1144-23ae-4f7a-862c-e18995318226
+---
 
-## Run Locally
+## 📖 فهرست مطالب / Table of Contents
+1. [ویژگی‌های کلیدی (Key Features)](#1-ویژگیهای-کلیدی-key-features)
+2. [سیستم کنترل بازی دوگانه (Dual Controls)](#2-سیستم-کنترل-بازی-دوگانه-dual-controls)
+3. [سیستم دوربین و محدودکننده حرکت (Camera & Bounds Constraint)](#3-سیستم-دوربین-و-محدودکننده-حرکت-camera--bounds-constraint)
+4. [رنگ‌بندی‌های پویا و لایه‌ها (Dynamic Palettes)](#4-رنگبندیهای-پویا-و-لایهها-dynamic-palettes)
+5. [پایداری اطلاعات و دیتابیس (Data Persistence)](#5-پایداری-اطلاعات-و-دیتابیس-data-persistence)
+6. [فناوری ساخت و معماری (Architecture & Tech Stack)](#6-فناوری-ساخت-و-معماری-architecture--tech-stack)
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+---
 
+## 1. ویژگی‌های کلیدی (Key Features)
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
+### 🌍 بومی‌سازی دو زبانه (Bilingual Localization)
+*   **پشتیبانی کامل از فارسی و انگلیسی**: تغییر زبان درجا و بدون نیاز به راه‌اندازی مجدد برنامه.
+*   **تغییر جهت خودکار چیدمان (RTL / LTR)**: تنظیم پویای رابط کاربری با توجه به زبان انتخاب‌شده.
+*   **تبدیل اعداد**: نمایش تمام زمان‌ها و مراحل با اعداد زیبای فارسی هنگامی که زبان روی فارسی تنظیم شده است.
+
+### 🎮 گیم‌پلی بی‌نهایت و مراحل الگوریتمی (Procedural Mazes)
+*   تولید خودکار مازها با ابعاد متغیر (از $8 \times 8$ در مراحل ابتدایی تا $45 \times 45$ در سطوح پیشرفته) به کمک الگوریتم‌های توسعه‌یافته گراف (DFS).
+*   دارای ۱۰۰ مرحله پیش‌فرض تقسیم‌شده به دسته‌های سختی گوناگون با چالش‌های منحصر‌به‌فرد.
+
+### ✨ جلوه‌های بصری نئونی و فوق مدرن (Glassmorphic Glow Theme)
+*   رندرینگ پیشرفته Canvas با سایه‌های نئونی درخشان برای دیوارها و توپ بازیکن.
+*   افکت ذرات معلق (Particle Explosion) فیزیکی به هنگام پیروزی در مرحله.
+*   ردپای درخشان (Breadcrumb Trail) که مسیرهای طی‌شده توسط کاربر را روشن نگه می‌دارد تا از سردرگمی جلوگیری کند.
+*   نقشه کمکی گوشه تصویر (Minimap Overlay) برای مراحل پیچیده و بزرگ.
+
+---
+
+## 2. سیستم کنترل بازی دوگانه (Dual Controls)
+
+برنامه مجهز به دو نوع کنترل لمسی پیشرفته است که کاربر می‌تواند در منوی تنظیمات یا **درجا از بالای صفحه بازی** آن‌ها را جابجا کند:
+
+1.  **کنترل کشیدنی (Swipe Gestures)**:
+    *   شناسایی سریع ژست‌های حرکتی انگشت روی ماز به صورت افقی و عمودی با حساسیت بالا برای هدایت توپ درخشان.
+2.  **جهت‌نمای صیقلی شیشه‌ای (Virtual D-Pad / Joystick)**:
+    *   یک کنترلر دایره‌ای با تم شیشه‌ای (Glassmorphism) و بازخورد هپتیک (Haptic Vibration) که به کاربر امکان حرکت دادن دقیق توپ را با کلیک روی دکمه‌های جهت می‌دهد.
+
+---
+
+## 3. سیستم دوربین و محدودکننده حرکت (Camera & Bounds Constraint)
+
+*   **رهگیری خودکار بازیکن (Camera Follow)**: دوربین به طور پیش‌فرض مرکز صفحه را بر روی توپ بازیکن قفل می‌کند تا همواره دید مناسبی داشته باشید.
+*   **محدودیت جابجایی نقشه (Panning Bounds Constraint)**: کاربر می‌تواند با نگه داشتن انگشت روی صفحه، نقشه را جابجا کند؛ اما بر اساس ابعاد گوشی، جابجایی نقشه به شکل بسیار دقیقی محدود شده است تا نقشه هرگز از کادر گوشی خارج نشود.
+*   **سیستم زوم دقیق (Precise Zoom Engine)**:
+    *   پشتیبانی از ژست دو انگشتی (Pinch to Zoom) برای تغییر بزرگنمایی بین کادرهای `0.3x` تا `3.5x`.
+    *   **دکمه‌های شناور زوم**: دکمه‌های شیشه‌ای مدرن در حاشیه راست نقشه شامل دکمه‌های **بزرگ‌نمایی (+)**، **کوچک‌نمایی (-)** و **دکمه فوکوس روی بازیکن** جهت بازنشانی درجا به ابعاد ایده‌آل پیش‌فرض.
+
+---
+
+## 4. رنگ‌بندی‌های پویا و لایه‌ها (Dynamic Palettes)
+
+رنگ‌بندی بازی متناسب با سطح سختی هر مرحله (Tier) تغییر می‌کند:
+*   **مراحل ساده (Tier 1 - سبز فیروزه‌ای)**: آرامش‌بخش، فواصل بزرگ و مناسب برای یادگیری.
+*   **مراحل متوسط (Tier 2 - آبی سایبری)**: چالش‌های متوسط با دیوارهای نئونی درخشان.
+*   **مراحل دشوار (Tier 3 - ارغوانی غروب)**: مازهای متراکم همراه با نقشه کمکی (Minimap).
+*   **مراحل گدازه (Tier 4 - نارنجی آتشین)**: بزرگترین ابعاد ماز با پیچ‌وخم‌های فوق‌العاده چالش‌برانگیز.
+
+---
+
+## 5. پایداری اطلاعات و دیتابیس (Data Persistence)
+
+*   استفاده از کتابخانه **Room Database** به همراه **Kotlin Flow** برای ذخیره‌سازی آفلاین و زنده پیشرفت‌های کاربر.
+*   ذخیره تعداد ستاره‌های دریافتی برای هر مرحله (حداکثر ۳ ستاره بر اساس سرعت حل مسئله).
+*   ذخیره بهترین رکورد زمانی (Best Time Record) برای هر مرحله به صورت کاملاً مستقل.
+*   قابلیت پاک‌سازی و بازنشانی (Reset) تمام پیشرفت‌ها از بخش تنظیمات.
+
+---
+
+## 6. فناوری ساخت و معماری (Architecture & Tech Stack)
+
+*   **UI/UX**: Jetpack Compose (M3), Canvas 2D API, Custom Shaders using native Graphics.
+*   **Architecture**: Model-View-ViewModel (MVVM) with strict Unidirectional Data Flow (UDF).
+*   **Asynchronous Processing**: Kotlin Coroutines & Flow API.
+*   **Storage**: SQLite abstraction via Room ORM & Android Preference Datastore.
+*   **Vibrations & Audio**: Custom vibrator profiles and synthesised feedback audio engine.
+
+---
+
+## 💻 نصب و راه‌اندازی / Installation & Building
+
+برنامه به صورت کاملاً ماژولار پیاده‌سازی شده و از طریق سیستم ساخت گریدل به سادگی قابل اجراست:
+
+```bash
+# کامپایل و بیلد پروژه برای دیباگ
+gradle :app:assembleDebug
+```
+
+برای تست محلی برنامه روی JVM بدون نیاز به شبیه‌ساز سنگین، تست‌های **Robolectric** و تست‌های تصویر برداری **Roborazzi** نیز به طور پیش‌فرض پیکربندی شده‌اند.
+
+---
+*توسعه داده شده با ❤️ برای خلق بهترین بازی لابرینت اندرویدی در کلاس جهانی.*
