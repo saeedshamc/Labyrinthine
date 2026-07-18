@@ -44,6 +44,24 @@ enum class ControlScheme {
 }
 
 /**
+ * Leaderboard record representing competitor ranking in Time Trial.
+ */
+data class LeaderboardEntry(
+    val rank: Int,
+    val name: String,
+    val timeMs: Long,
+    val isUser: Boolean = false,
+    val isPersonalBest: Boolean = false
+)
+
+private data class RawEntry(
+    val name: String,
+    val timeMs: Long,
+    val isUser: Boolean,
+    val isPB: Boolean
+)
+
+/**
  * Visual particle modeling for the celebratory complete explosion.
  */
 data class Particle(
@@ -69,6 +87,7 @@ class MazeViewModel(
     var hapticEnabled by mutableStateOf(true)
     var controlScheme by mutableStateOf(ControlScheme.SWIPE)
     var minimapEnabled by mutableStateOf(true)
+    var isTimeTrialMode by mutableStateOf(false)
 
     // Current navigation state
     var currentScreen by mutableStateOf(GameScreen.WELCOME)
@@ -80,6 +99,50 @@ class MazeViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    /**
+     * Generates a fully dynamic, real-time leaderboard list of competitors
+     * relative to the user's active timer or personal best record.
+     */
+    fun getLeaderboardEntries(activeTimeMs: Long): List<LeaderboardEntry> {
+        val (threeStarSec, twoStarSec) = DifficultyCurve.getStarThresholds(currentLevel)
+        val baseSec = threeStarSec.toDouble()
+
+        // 4 preset global competitors with times proportional to the star thresholds
+        val comp1Time = (baseSec * 0.70 * 1000).toLong() // Top Master
+        val comp2Time = (baseSec * 0.90 * 1000).toLong() // Pro Speedrunner
+        val comp3Time = (baseSec * 1.15 * 1000).toLong() // Regular Gamer
+        val comp4Time = (baseSec * 1.40 * 1000).toLong() // Beginner/Ghost
+
+        val rawList = mutableListOf<RawEntry>()
+        rawList.add(RawEntry("LabyrinthLegend", comp1Time, isUser = false, isPB = false))
+        rawList.add(RawEntry("CyberGlider", comp2Time, isUser = false, isPB = false))
+        rawList.add(RawEntry("NeonRacer", comp3Time, isUser = false, isPB = false))
+        rawList.add(RawEntry("ShadowRunner", comp4Time, isUser = false, isPB = false))
+
+        // Include user's personal best if they have completed this level before
+        val pbTimeMs = levelProgressList.value.find { it.level == currentLevel }?.bestTimeMs ?: 0L
+        if (pbTimeMs > 0L) {
+            rawList.add(RawEntry("Personal Best", pbTimeMs, isUser = false, isPB = true))
+        }
+
+        // Add current active run position
+        rawList.add(RawEntry("You", activeTimeMs, isUser = true, isPB = false))
+
+        // Sort ascending by time
+        val sortedList = rawList.sortedBy { it.timeMs }
+
+        // Map to rank and output LeaderboardEntry elements
+        return sortedList.mapIndexed { index, entry ->
+            LeaderboardEntry(
+                rank = index + 1,
+                name = entry.name,
+                timeMs = entry.timeMs,
+                isUser = entry.isUser,
+                isPersonalBest = entry.isPB
+            )
+        }
+    }
 
     // Active gameplay variables
     var currentLevel by mutableStateOf(1)

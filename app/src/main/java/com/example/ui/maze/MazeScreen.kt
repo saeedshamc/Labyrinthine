@@ -155,7 +155,83 @@ fun WelcomeView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTier
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Premium Mode Selector Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .padding(vertical = 4.dp)
+                .testTag("mode_selector_card"),
+            colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+            border = androidx.compose.foundation.BorderStroke(1.2.dp, palette.wallColor.copy(alpha = 0.25f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (viewModel.isTimeTrialMode) Localization.getString("time_trial_mode", lang) else Localization.getString("standard_mode", lang),
+                    color = palette.wallColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(palette.bgStart.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Standard Tab
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (!viewModel.isTimeTrialMode) palette.accent else Color.Transparent)
+                            .clickable {
+                                viewModel.isTimeTrialMode = false
+                            }
+                            .padding(vertical = 8.dp)
+                            .testTag("mode_tab_standard"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = Localization.getString("standard_mode", lang),
+                            color = if (!viewModel.isTimeTrialMode) (if (viewModel.isDarkTheme) Color.Black else Color.White) else palette.text.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+
+                    // Time Trial Tab
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (viewModel.isTimeTrialMode) palette.accent else Color.Transparent)
+                            .clickable {
+                                viewModel.isTimeTrialMode = true
+                            }
+                            .padding(vertical = 8.dp)
+                            .testTag("mode_tab_timetrial"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = Localization.getString("time_trial", lang),
+                            color = if (viewModel.isTimeTrialMode) (if (viewModel.isDarkTheme) Color.Black else Color.White) else palette.text.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Quick Launch Buttons
         Button(
@@ -557,12 +633,33 @@ fun LevelSelectView(viewModel: MazeViewModel, palette: com.example.ui.theme.Maze
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = Localization.getString("select_level", lang),
-                color = palette.wallColor,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = Localization.getString("select_level", lang),
+                    color = palette.wallColor,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (viewModel.isTimeTrialMode) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = palette.accent.copy(alpha = 0.25f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, palette.accent),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.testTag("timetrial_badge")
+                    ) {
+                        Text(
+                            text = Localization.getString("time_trial", lang),
+                            color = palette.accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -820,6 +917,17 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                         JoystickControls(viewModel = viewModel, palette = palette)
                     }
                 }
+
+                // Render Time Trial Leaderboard Overlay
+                if (viewModel.isTimeTrialMode) {
+                    LeaderboardOverlay(
+                        viewModel = viewModel,
+                        palette = palette,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 12.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1051,6 +1159,44 @@ fun LevelCompleteView(viewModel: MazeViewModel, palette: com.example.ui.theme.Ma
                             Text(text = Localization.getString("time_taken", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
                             Text(text = "$displaySecStr s", color = palette.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
+
+                        if (viewModel.isTimeTrialMode) {
+                            val finalEntries = viewModel.getLeaderboardEntries(viewModel.completionTimeMs)
+                            val finalRank = finalEntries.find { it.isUser }?.rank ?: 5
+                            val finalRankStr = when (finalRank) {
+                                1 -> Localization.getString("rank_1", lang)
+                                2 -> Localization.getString("rank_2", lang)
+                                3 -> Localization.getString("rank_3", lang)
+                                4 -> Localization.getString("rank_4", lang)
+                                else -> Localization.getString("rank_5", lang)
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = Localization.getString("rank", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
+                                Text(
+                                    text = finalRankStr,
+                                    color = if (finalRank == 1) palette.accent else palette.text,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+
+                        val pbTimeMs = viewModel.levelProgressList.value.find { it.level == viewModel.currentLevel }?.bestTimeMs ?: 0L
+                        if (pbTimeMs > 0L) {
+                            val pbSec = pbTimeMs / 1000f
+                            val pbSecStr = Localization.formatNumbers(String.format("%.1f", pbSec), lang)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = Localization.getString("best_time", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
+                                Text(text = "$pbSecStr s", color = palette.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            }
+                        }
                     }
                 }
 
@@ -1121,3 +1267,170 @@ fun LevelCompleteView(viewModel: MazeViewModel, palette: com.example.ui.theme.Ma
  */
 private fun borderStroke(width: androidx.compose.ui.unit.Dp, color: Color) =
     androidx.compose.foundation.BorderStroke(width, color)
+
+@Composable
+fun LeaderboardOverlay(
+    viewModel: MazeViewModel,
+    palette: com.example.ui.theme.MazeTierPalette,
+    modifier: Modifier = Modifier
+) {
+    val lang = viewModel.currentLanguage
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val activeTimeMs = viewModel.gameTimeTicks * 100L
+    val entries = viewModel.getLeaderboardEntries(activeTimeMs)
+    val userEntry = entries.find { it.isUser }
+    val userRank = userEntry?.rank ?: 1
+
+    val rankStr = when (userRank) {
+        1 -> Localization.getString("rank_1", lang)
+        2 -> Localization.getString("rank_2", lang)
+        3 -> Localization.getString("rank_3", lang)
+        4 -> Localization.getString("rank_4", lang)
+        else -> Localization.getString("rank_5", lang)
+    }
+
+    Box(modifier = modifier) {
+        if (!isExpanded) {
+            // Collapsed: Pulsing glassmorphic mini-pill button
+            Card(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { isExpanded = true }
+                    .testTag("leaderboard_pill"),
+                colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.85f)),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, palette.accent.copy(alpha = 0.6f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Leaderboard",
+                        tint = palette.accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = rankStr,
+                        color = palette.text,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            // Expanded: Exquisite slide-out glassmorphic panel
+            Card(
+                modifier = Modifier
+                    .width(180.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable(enabled = false) {} // Consume clicks to prevent background swipe
+                    .testTag("leaderboard_expanded_card"),
+                colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.92f)),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, palette.wallColor.copy(alpha = 0.4f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Header Row with collapse arrow
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = palette.accent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = Localization.getString("leaderboard", lang),
+                                color = palette.wallColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        IconButton(
+                            onClick = { isExpanded = false },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Collapse",
+                                tint = palette.text.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // Divider line
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(palette.wallColor.copy(alpha = 0.2f))
+                    )
+
+                    // Ranking rows
+                    entries.take(5).forEach { entry ->
+                        val displaySec = (entry.timeMs / 1000f)
+                        val displaySecStr = Localization.formatNumbers(String.format("%.1f", displaySec), lang)
+
+                        val isUser = entry.isUser
+                        val entryBg = if (isUser) palette.accent.copy(alpha = 0.15f) else Color.Transparent
+                        val entryBorderColor = if (isUser) palette.accent.copy(alpha = 0.4f) else Color.Transparent
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(entryBg, RoundedCornerShape(8.dp))
+                                .border(
+                                    if (isUser) 1.dp else 0.dp,
+                                    entryBorderColor,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "${entry.rank}.",
+                                    color = if (isUser) palette.accent else palette.text.copy(alpha = 0.6f),
+                                    fontWeight = if (isUser) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 11.sp
+                                )
+                                Text(
+                                    text = if (entry.isPersonalBest) Localization.getString("personal_best", lang) else if (isUser) "You" else entry.name,
+                                    color = if (isUser) palette.accent else palette.text,
+                                    fontWeight = if (isUser) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 10.sp,
+                                    maxLines = 1
+                                )
+                            }
+                            Text(
+                                text = "${displaySecStr}s",
+                                color = if (isUser) palette.accent else palette.text.copy(alpha = 0.8f),
+                                fontWeight = if (isUser) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

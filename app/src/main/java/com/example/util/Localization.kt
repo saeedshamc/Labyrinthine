@@ -97,7 +97,21 @@ object Localization {
         "unlocked_palettes" to "Progress Palettes unlocked",
         "how_to_play" to "Swipe to slide your glowing orb to the exit pulsing circle!",
         "fa_lang_name" to "فارسی",
-        "en_lang_name" to "English"
+        "en_lang_name" to "English",
+        "time_trial" to "Time Trial",
+        "standard_mode" to "Standard Mode",
+        "time_trial_mode" to "Time Trial Mode",
+        "leaderboard" to "Leaderboard",
+        "rank" to "Rank",
+        "personal_best" to "Personal Best",
+        "personal_best_short" to "PB: %s",
+        "ghost_ahead" to "Ahead",
+        "ghost_passed" to "Passed",
+        "rank_1" to "1st",
+        "rank_2" to "2nd",
+        "rank_3" to "3rd",
+        "rank_4" to "4th",
+        "rank_5" to "5th"
     )
 
     private val FA_STRINGS = mapOf(
@@ -141,6 +155,20 @@ object Localization {
         "unlocked_palettes" to "رنگ‌بندی‌های پویا باز شده",
         "how_to_play" to "توپ درخشان خود را با کشیدن انگشت به سمت دایره تپنده پایان برسانید!",
         "fa_lang_name" to "فارسی",
-        "en_lang_name" to "English"
+        "en_lang_name" to "English",
+        "time_trial" to "رقابت زمانی",
+        "standard_mode" to "حالت استاندارد",
+        "time_trial_mode" to "حالت رقابت زمانی",
+        "leaderboard" to "جدول رده‌بندی",
+        "rank" to "رتبه",
+        "personal_best" to "بهترین رکورد فردی",
+        "personal_best_short" to "رکورد شما: %s",
+        "ghost_ahead" to "جلوتر",
+        "ghost_passed" to "پشت سر",
+        "rank_1" to "اول",
+        "rank_2" to "دوم",
+        "rank_3" to "سوم",
+        "rank_4" to "چهارم",
+        "rank_5" to "پنجم"
     )
 }
