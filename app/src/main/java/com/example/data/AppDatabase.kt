@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
  * Main Room Database for local data persistence.
  * Tracks level progression, completion times, and stars.
  */
-@Database(entities = [LevelProgress::class], version = 1, exportSchema = false)
+@Database(entities = [LevelProgress::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun progressDao(): ProgressDao

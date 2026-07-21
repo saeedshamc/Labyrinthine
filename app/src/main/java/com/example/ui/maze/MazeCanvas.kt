@@ -245,8 +245,13 @@ fun MazeCanvas(
                 particles.forEach { p ->
                     val pCanvasX = p.x * cellSize + cameraX
                     val pCanvasY = p.y * cellSize + cameraY
+                    val particleColor = when (p.colorType) {
+                        1 -> palette.accent.copy(alpha = p.alpha)
+                        2 -> androidx.compose.ui.graphics.Color.White.copy(alpha = p.alpha)
+                        else -> palette.playerColor.copy(alpha = p.alpha)
+                    }
                     drawCircle(
-                        color = palette.playerColor.copy(alpha = p.alpha),
+                        color = particleColor,
                         radius = p.size * scale,
                         center = Offset(pCanvasX, pCanvasY)
                     )

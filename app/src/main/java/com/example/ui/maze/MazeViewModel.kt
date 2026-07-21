@@ -16,6 +16,7 @@ import com.example.data.MazeGenerator
 import com.example.data.ProgressRepository
 import com.example.util.DifficultyCurve
 import com.example.util.Localization
+import com.example.util.SoundManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,7 +73,8 @@ data class Particle(
     val size: Float,
     var alpha: Float,
     var life: Int,
-    val maxLife: Int
+    val maxLife: Int,
+    val colorType: Int = 0
 )
 
 class MazeViewModel(
@@ -83,7 +85,15 @@ class MazeViewModel(
     // Dynamic localisation & theme settings states
     var currentLanguage by mutableStateOf(Localization.Language.EN)
     var isDarkTheme by mutableStateOf(true) // default: dark theme
-    var soundEnabled by mutableStateOf(true)
+    
+    private var _soundEnabled by mutableStateOf(true)
+    var soundEnabled: Boolean
+        get() = _soundEnabled
+        set(value) {
+            _soundEnabled = value
+            SoundManager.isSoundEnabled = value
+        }
+
     var hapticEnabled by mutableStateOf(true)
     var controlScheme by mutableStateOf(ControlScheme.JOYSTICK)
     var minimapEnabled by mutableStateOf(true)
@@ -161,6 +171,8 @@ class MazeViewModel(
     var levelCompleted by mutableStateOf(false)
     var starsEarned by mutableStateOf(0)
     var completionTimeMs by mutableStateOf(0L)
+    var stepsTaken by mutableStateOf(0)
+    var currentScore by mutableStateOf(0)
 
     // Particle explosions on level completion
     var activeParticles by mutableStateOf<List<Particle>>(emptyList())
@@ -221,6 +233,8 @@ class MazeViewModel(
         levelCompleted = false
         starsEarned = 0
         gameTimeTicks = 0L
+        stepsTaken = 0
+        currentScore = 0
         activeParticles = emptyList()
         currentScreen = GameScreen.GAME_PLAY
 
@@ -279,7 +293,10 @@ class MazeViewModel(
         }
 
         // Verify boundaries
-        if (targetX !in 0 until size || targetY !in 0 until size) return
+        if (targetX !in 0 until size || targetY !in 0 until size) {
+            SoundManager.playCollision()
+            return
+        }
 
         val currentCell = grid[playerX][playerY]
 
@@ -295,6 +312,7 @@ class MazeViewModel(
         if (!moveBlocked) {
             playerX = targetX
             playerY = targetY
+            stepsTaken++
             
             // Add to breadcrumb trail
             if (Pair(playerX, playerY) !in playerTrail) {
@@ -302,6 +320,9 @@ class MazeViewModel(
             }
             
             triggerHapticClick()
+            SoundManager.playMove()
+        } else {
+            SoundManager.playCollision()
         }
     }
 
@@ -323,13 +344,20 @@ class MazeViewModel(
             else -> 1
         }
 
+        // Calculate dynamic game score
+        val baseScore = 1000 + currentLevel * 100
+        val timePenalty = (completionTimeMs / 100).toInt() // 10 points per second (100ms units)
+        val stepsPenalty = stepsTaken * 20
+        currentScore = maxOf(100, baseScore - timePenalty - stepsPenalty)
+
         // Trigger celebratory visual particles
         triggerCompletionExplosion()
         triggerHapticCompletion()
+        SoundManager.playWin()
 
         // Persist level progress and unlock next level in Room database
         viewModelScope.launch {
-            repository.saveProgress(currentLevel, starsEarned, completionTimeMs)
+            repository.saveProgress(currentLevel, starsEarned, completionTimeMs, currentScore, stepsTaken)
         }
     }
 
@@ -339,22 +367,22 @@ class MazeViewModel(
     private fun triggerCompletionExplosion() {
         val particles = mutableListOf<Particle>()
         val random = Random(System.currentTimeMillis())
-        val size = DifficultyCurve.getGridSize(currentLevel)
         
-        // Spawn 40 particles
-        for (i in 0 until 45) {
+        // Spawn 60 dynamic particles of different colors
+        for (i in 0 until 60) {
             val angle = random.nextFloat() * 2f * Math.PI.toFloat()
-            val speed = 2f + random.nextFloat() * 8f
+            val speed = 2f + random.nextFloat() * 10f
             particles.add(
                 Particle(
                     x = exitX.toFloat() + 0.5f,
                     y = exitY.toFloat() + 0.5f,
                     vx = Math.cos(angle.toDouble()).toFloat() * speed * 0.05f,
                     vy = Math.sin(angle.toDouble()).toFloat() * speed * 0.05f,
-                    size = 6f + random.nextFloat() * 12f,
+                    size = 6f + random.nextFloat() * 14f,
                     alpha = 1.0f,
                     life = 0,
-                    maxLife = 20 + random.nextInt(30)
+                    maxLife = 20 + random.nextInt(35),
+                    colorType = random.nextInt(3)
                 )
             )
         }

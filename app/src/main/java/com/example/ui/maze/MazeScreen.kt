@@ -843,23 +843,74 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     )
                 }
 
-                // Dynamic Live Clock
+                // Dynamic Live Clock & Competitive Challenge Star Countdown
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = borderStroke(0.5.dp, palette.wallColor.copy(alpha = 0.3f))
+                    colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.65f)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = borderStroke(1.dp, palette.wallColor.copy(alpha = 0.4f))
                 ) {
                     val tenths = (viewModel.gameTimeTicks % 10).toInt()
                     val totalSec = (viewModel.gameTimeTicks / 10).toInt()
-                    Text(
-                        text = Localization.getString("timer", lang, totalSec, tenths),
-                        color = palette.text,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                    val (threeStarSec, twoStarSec) = DifficultyCurve.getStarThresholds(viewModel.currentLevel)
+
+                    Row(
                         modifier = Modifier
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                            .testTag("game_timer_ticks")
-                    )
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = "Timer",
+                            tint = palette.accent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        
+                        Text(
+                            text = Localization.getString("timer", lang, totalSec, tenths),
+                            color = palette.text,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            modifier = Modifier.testTag("game_timer_ticks")
+                        )
+
+                        // Competitive challenge element: Star countdown timer!
+                        val (currentStars, nextMilestoneSec, starColor) = when {
+                            totalSec < threeStarSec -> Triple(3, threeStarSec, WarmGold)
+                            totalSec < twoStarSec -> Triple(2, twoStarSec, Color.LightGray)
+                            else -> Triple(1, 0, Color.Gray.copy(alpha = 0.5f))
+                        }
+
+                        if (nextMilestoneSec > 0) {
+                            val remaining = nextMilestoneSec - totalSec
+                            val remainingStr = Localization.formatNumbers(remaining.toString(), lang)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(starColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Next Star",
+                                        tint = starColor,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "${Localization.formatNumbers(currentStars.toString(), lang)}: -${remainingStr}s",
+                                        color = starColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1174,6 +1225,10 @@ fun LevelCompleteView(viewModel: MazeViewModel, palette: com.example.ui.theme.Ma
                     colors = CardDefaults.cardColors(containerColor = palette.accent.copy(alpha = 0.08f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    val progress = viewModel.levelProgressList.value.find { it.level == viewModel.currentLevel }
+                    val savedHighScore = progress?.highScore ?: 0
+                    val savedBestSteps = progress?.bestSteps ?: 0
+
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1184,6 +1239,43 @@ fun LevelCompleteView(viewModel: MazeViewModel, palette: com.example.ui.theme.Ma
                         ) {
                             Text(text = Localization.getString("time_taken", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
                             Text(text = "$displaySecStr s", color = palette.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+
+                        // Steps Taken
+                        val stepsStr = Localization.formatNumbers(viewModel.stepsTaken.toString(), lang)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = Localization.getString("steps_taken", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
+                            Text(text = stepsStr, color = palette.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+
+                        // Current Score (Highlighted with primary accent color)
+                        val scoreStr = Localization.formatNumbers(viewModel.currentScore.toString(), lang)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = Localization.getString("score", lang), color = palette.accent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text(text = scoreStr, color = palette.accent, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            thickness = 0.5.dp,
+                            color = palette.wallColor.copy(alpha = 0.15f)
+                        )
+
+                        // High Score
+                        val finalHighScore = maxOf(savedHighScore, viewModel.currentScore)
+                        val highScoreStr = Localization.formatNumbers(finalHighScore.toString(), lang)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = Localization.getString("high_score", lang), color = palette.text.copy(alpha = 0.7f), fontSize = 14.sp)
+                            Text(text = highScoreStr, color = palette.text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         }
 
                         if (viewModel.isTimeTrialMode) {

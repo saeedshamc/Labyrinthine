@@ -16,7 +16,7 @@ class ProgressRepository(private val progressDao: ProgressDao) {
     /**
      * Saves progress for a completed level and automatically unlocks the next level.
      */
-    suspend fun saveProgress(level: Int, stars: Int, timeMs: Long) {
+    suspend fun saveProgress(level: Int, stars: Int, timeMs: Long, score: Int, steps: Int) {
         val existing = progressDao.getProgressForLevel(level)
         val bestTime = if (existing == null || existing.bestTimeMs == 0L || timeMs < existing.bestTimeMs) {
             timeMs
@@ -24,6 +24,12 @@ class ProgressRepository(private val progressDao: ProgressDao) {
             existing.bestTimeMs
         }
         val maxStars = if (existing == null || stars > existing.stars) stars else existing.stars
+        val finalScore = if (existing == null || score > existing.highScore) score else existing.highScore
+        val minSteps = if (existing == null || existing.bestSteps == 0 || steps < existing.bestSteps) {
+            steps
+        } else {
+            existing.bestSteps
+        }
         
         // Save current level progress
         progressDao.insertOrUpdate(
@@ -31,7 +37,9 @@ class ProgressRepository(private val progressDao: ProgressDao) {
                 level = level,
                 stars = maxStars,
                 bestTimeMs = bestTime,
-                isUnlocked = true
+                isUnlocked = true,
+                highScore = finalScore,
+                bestSteps = minSteps
             )
         )
 
@@ -44,7 +52,9 @@ class ProgressRepository(private val progressDao: ProgressDao) {
                     level = nextLevel,
                     stars = nextExisting?.stars ?: 0,
                     bestTimeMs = nextExisting?.bestTimeMs ?: 0L,
-                    isUnlocked = true
+                    isUnlocked = true,
+                    highScore = nextExisting?.highScore ?: 0,
+                    bestSteps = nextExisting?.bestSteps ?: 0
                 )
             )
         }
