@@ -102,6 +102,18 @@ class ProgressRepository(private val progressDao: ProgressDao) {
     suspend fun resetProgress() {
         progressDao.clearAll()
         progressDao.clearAllRuns()
+        progressDao.clearAllSpecialStages()
         initializeProgress()
+    }
+
+    // Special custom random stage repository methods
+    val allSpecialStages: Flow<List<SpecialStage>> = progressDao.getAllSpecialStages()
+
+    suspend fun insertSpecialStage(stage: SpecialStage): Long {
+        return progressDao.insertSpecialStage(stage)
+    }
+
+    suspend fun deleteSpecialStage(id: Long) {
+        progressDao.deleteSpecialStage(id)
     }
 }

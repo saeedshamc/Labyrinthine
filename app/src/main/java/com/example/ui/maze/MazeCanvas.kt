@@ -63,7 +63,9 @@ fun MazeCanvas(
     controlScheme: ControlScheme = ControlScheme.SWIPE,
     onSwipeMove: (dx: Int, dy: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
-    level: Int = 1
+    level: Int = 1,
+    ballStyle: BallStyle = BallStyle.CLASSIC,
+    trailColorStyle: TrailColorStyle = TrailColorStyle.MATCH_THEME
 ) {
     val gridSize = grid.size
 
@@ -183,12 +185,13 @@ fun MazeCanvas(
             val cameraY = centerOffset.y - playerTargetCenterY + panOffset.y
 
             // --- 1. DRAW VISITED CELLS TRAIL ---
+            val resolvedTrailColor = trailColorStyle.color ?: palette.trailColor
             trail.forEach { (tx, ty) ->
                 val rx = tx * cellSize + cameraX
                 val ry = ty * cellSize + cameraY
                 // Soft glow of breadcrumbs
                 drawRect(
-                    color = palette.trailColor,
+                    color = resolvedTrailColor,
                     topLeft = Offset(rx + cellSize * 0.15f, ry + cellSize * 0.15f),
                     size = Size(cellSize * 0.7f, cellSize * 0.7f)
                 )
@@ -233,13 +236,63 @@ fun MazeCanvas(
             val py = animPlayerY * cellSize + cameraY + (cellSize / 2f)
             val playerRadius = cellSize * 0.35f
 
-            drawIntoCanvas { canvas ->
-                val pColor = palette.playerColor.toArgb()
-                val playerPaint = Paint().asFrameworkPaint().apply {
-                    color = pColor
-                    setShadowLayer(cellSize * 0.5f, 0f, 0f, pColor)
+            val pColor = palette.playerColor.toArgb()
+            val baseColor = palette.playerColor
+
+            when (ballStyle) {
+                BallStyle.CLASSIC -> {
+                    drawIntoCanvas { canvas ->
+                        val playerPaint = Paint().asFrameworkPaint().apply {
+                            color = pColor
+                            setShadowLayer(cellSize * 0.5f, 0f, 0f, pColor)
+                        }
+                        canvas.nativeCanvas.drawCircle(px, py, playerRadius, playerPaint)
+                    }
                 }
-                canvas.nativeCanvas.drawCircle(px, py, playerRadius, playerPaint)
+                BallStyle.CYBER_RING -> {
+                    // Draw outer hollow circle and an inner pulsing core dot
+                    drawCircle(
+                        color = baseColor,
+                        radius = playerRadius,
+                        style = Stroke(width = playerRadius * 0.3f)
+                    )
+                    drawCircle(
+                        color = baseColor,
+                        radius = playerRadius * 0.35f
+                    )
+                }
+                BallStyle.PLASMA_ORB -> {
+                    // Plasma orb has layered semi-transparent glow fields
+                    for (i in 1..4) {
+                        drawCircle(
+                            color = baseColor.copy(alpha = 0.22f * i),
+                            radius = playerRadius * (1.1f - i * 0.2f)
+                        )
+                    }
+                    drawCircle(
+                        color = Color.White,
+                        radius = playerRadius * 0.25f
+                    )
+                }
+                BallStyle.PULSING_STAR -> {
+                    // Pulsing star drawing
+                    val pulse = 1f + 0.15f * kotlin.math.sin(System.currentTimeMillis() / 150.0).toFloat()
+                    val r = playerRadius * pulse
+                    val path = Path().apply {
+                        moveTo(px, py - r)
+                        quadraticTo(px, py, px + r, py)
+                        quadraticTo(px, py, px, py + r)
+                        quadraticTo(px, py, px - r, py)
+                        quadraticTo(px, py, px, py - r)
+                        close()
+                    }
+                    drawPath(path, color = baseColor)
+                    drawCircle(
+                        color = Color.White,
+                        radius = playerRadius * 0.25f,
+                        center = Offset(px, py)
+                    )
+                }
             }
 
             // --- 5. CELEBRATORY COMPLETION PARTICLES ---

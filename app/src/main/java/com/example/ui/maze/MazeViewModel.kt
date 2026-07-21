@@ -15,9 +15,11 @@ import com.example.data.LevelRun
 import com.example.data.MazeCell
 import com.example.data.MazeGenerator
 import com.example.data.ProgressRepository
+import com.example.data.SpecialStage
 import com.example.util.DifficultyCurve
 import com.example.util.Localization
 import com.example.util.SoundManager
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +36,29 @@ enum class GameScreen {
     WELCOME,
     LEVEL_SELECT,
     GAME_PLAY,
-    SETTINGS
+    SETTINGS,
+    SPECIAL_SECTION
+}
+
+/**
+ * Customizable Ball Styles and milestones.
+ */
+enum class BallStyle(val displayNameEn: String, val displayNameFa: String, val requiredLevel: Int) {
+    CLASSIC("Classic Glow", "کلاسیک درخشان", 1),
+    CYBER_RING("Cyber Ring", "حلقه سایبری", 3),
+    PLASMA_ORB("Plasma Orb", "گوی پلاسما", 5),
+    PULSING_STAR("Pulsing Star", "ستاره تپنده", 8)
+}
+
+/**
+ * Customizable Trail Effect Colors and milestones.
+ */
+enum class TrailColorStyle(val displayNameEn: String, val displayNameFa: String, val color: Color?, val requiredLevel: Int) {
+    MATCH_THEME("Theme Default", "پیش‌فرض پوسته", null, 1),
+    CYAN("Neon Cyan", "سایان نئون", Color(0xFF06B6D4), 2),
+    VIOLET("Electric Violet", "بنفش الکتریک", Color(0xFF8B5CF6), 4),
+    ORANGE("Fire Orange", "نارنجی آتشین", Color(0xFFF97316), 6),
+    EMERALD("Emerald Green", "سبز زمردی", Color(0xFF10B981), 8)
 }
 
 /**
@@ -99,6 +123,38 @@ class MazeViewModel(
     var controlScheme by mutableStateOf(ControlScheme.JOYSTICK)
     var minimapEnabled by mutableStateOf(true)
     var isTimeTrialMode by mutableStateOf(false)
+
+    // Ball Appearance & Trail customisation
+    var selectedBallStyle by mutableStateOf(BallStyle.CLASSIC)
+    var selectedTrailColor by mutableStateOf(TrailColorStyle.MATCH_THEME)
+
+    // Pause state
+    var isPaused by mutableStateOf(false)
+
+    // Auto-transition timer countdown state (in seconds)
+    var autoTransitionCountdown by mutableStateOf<Int?>(null)
+
+    // Special custom random stage states
+    var isSpecialStageActive by mutableStateOf(false)
+    var activeSpecialStageId by mutableStateOf<Long?>(null)
+    var activeSpecialStageName by mutableStateOf("")
+    var specialStagesList by mutableStateOf<List<SpecialStage>>(emptyList())
+
+    // Helper to calculate maximum level unlocked
+    val maxUnlockedLevel: Int
+        get() = levelProgressList.value
+            .filter { it.isUnlocked }
+            .maxOfOrNull { it.level } ?: 1
+
+    // Proximity to exit calculator
+    val proximityFraction: Float
+        get() {
+            val grid = mazeGrid ?: return 0f
+            val startDist = Math.abs(0 - exitX) + Math.abs(0 - exitY)
+            if (startDist == 0) return 1f
+            val currentDist = Math.abs(playerX - exitX) + Math.abs(playerY - exitY)
+            return (1f - currentDist.toFloat() / startDist.toFloat()).coerceIn(0f, 1f)
+        }
 
     // Current navigation state
     var currentScreen by mutableStateOf(GameScreen.WELCOME)
@@ -225,12 +281,23 @@ class MazeViewModel(
         viewModelScope.launch {
             repository.initializeProgress()
         }
+        viewModelScope.launch {
+            repository.allSpecialStages.collect {
+                specialStagesList = it
+            }
+        }
     }
+
+    private var transitionJob: Job? = null
 
     /**
      * Prepares and starts a specific level.
      */
     fun startLevel(level: Int) {
+        transitionJob?.cancel()
+        autoTransitionCountdown = null
+        isPaused = false
+        isSpecialStageActive = false
         viewModelScope.launch {
             isTransitioning = true
             delay(350) // Allow overlay fade-in transition to cover the screen
@@ -289,6 +356,114 @@ class MazeViewModel(
     }
 
     /**
+     * Prepares and starts a specific custom special stage.
+     */
+    fun startSpecialStage(stage: SpecialStage) {
+        transitionJob?.cancel()
+        autoTransitionCountdown = null
+        isPaused = false
+        isSpecialStageActive = true
+        activeSpecialStageId = stage.id
+        activeSpecialStageName = stage.name
+        
+        viewModelScope.launch {
+            isTransitioning = true
+            delay(350)
+            currentLevel = -1 // custom virtual level
+            
+            val size = stage.gridSize
+            // Generate procedural maze using SpecialStage seed
+            val generatedGrid = MazeGenerator.generate(size, size, seed = stage.seed)
+            mazeGrid = generatedGrid
+            
+            // Start at top-left
+            playerX = 0
+            playerY = 0
+            
+            // Exit placed randomly on outer borders
+            val random = java.util.Random(stage.seed)
+            val edgeChoices = if (size >= 11) 4 else 2
+            val edge = random.nextInt(edgeChoices)
+            when (edge) {
+                0 -> { // Bottom edge
+                    exitX = size / 2 + random.nextInt(size - size / 2)
+                    exitY = size - 1
+                    generatedGrid[exitX][exitY].bottomWall = false
+                }
+                1 -> { // Right edge
+                    exitX = size - 1
+                    exitY = size / 2 + random.nextInt(size - size / 2)
+                    generatedGrid[exitX][exitY].rightWall = false
+                }
+                2 -> { // Top edge
+                    exitX = size / 2 + random.nextInt(size - size / 2)
+                    exitY = 0
+                    generatedGrid[exitX][exitY].topWall = false
+                }
+                else -> { // Left edge
+                    exitX = 0
+                    exitY = size / 2 + random.nextInt(size - size / 2)
+                    generatedGrid[exitX][exitY].leftWall = false
+                }
+            }
+            
+            playerTrail = listOf(Pair(0, 0))
+            levelCompleted = false
+            starsEarned = 0
+            gameTimeTicks = 0L
+            stepsTaken = 0
+            currentScore = 0
+            activeParticles = emptyList()
+            currentScreen = GameScreen.GAME_PLAY
+
+            startTimer()
+            delay(150)
+            isTransitioning = false
+        }
+    }
+
+    /**
+     * Generates a completely random maze and saves it. Optionally starts it immediately.
+     */
+    fun generateAndSaveRandomSpecialStage(lang: Localization.Language, playImmediately: Boolean = false) {
+        viewModelScope.launch {
+            val randomSeed = Random.nextLong()
+            val size = Random.nextInt(9, 21) // 9 to 20 grid size
+            
+            val adjsEn = listOf("Enchanted", "Cosmic", "Mysterious", "Forgotten", "Quantum", "Cyber", "Sacred")
+            val nounsEn = listOf("Void", "Labyrinth", "Chamber", "Nexus", "Portal", "Dimension", "Haven")
+            val adjsFa = listOf("افسون شده", "کیهانی", "مرموز", "فراموش شده", "کوانتومی", "سایبری", "مقدس")
+            val nounsFa = listOf("خلاء", "هزارتو", "تالار", "هسته", "درگاه", "بعد", "پناهگاه")
+            
+            val randomIdx = Random.nextInt(adjsEn.size)
+            val name = if (lang == Localization.Language.FA) {
+                "${nounsFa[randomIdx]} ${adjsFa[randomIdx]}"
+            } else {
+                "${adjsEn[randomIdx]} ${nounsEn[randomIdx]}"
+            }
+            
+            val newStage = SpecialStage(
+                name = name,
+                seed = randomSeed,
+                gridSize = size
+            )
+            val newId = repository.insertSpecialStage(newStage)
+            if (playImmediately) {
+                startSpecialStage(newStage.copy(id = newId))
+            }
+        }
+    }
+
+    /**
+     * Deletes a special stage by ID.
+     */
+    fun deleteSpecialStage(id: Long) {
+        viewModelScope.launch {
+            repository.deleteSpecialStage(id)
+        }
+    }
+
+    /**
      * Start the countdown timer.
      */
     private fun startTimer() {
@@ -297,7 +472,9 @@ class MazeViewModel(
         timerJob = viewModelScope.launch {
             while (isTimerRunning && !levelCompleted) {
                 delay(100L)
-                gameTimeTicks++
+                if (!isPaused) {
+                    gameTimeTicks++
+                }
             }
         }
     }
@@ -314,9 +491,13 @@ class MazeViewModel(
      * Direct user instruction to move in one of the 4 card directions.
      */
     fun movePlayer(dx: Int, dy: Int) {
-        if (levelCompleted) return
+        if (levelCompleted || isPaused) return
         val grid = mazeGrid ?: return
-        val size = DifficultyCurve.getGridSize(currentLevel)
+        val size = if (isSpecialStageActive) {
+            grid.size
+        } else {
+            DifficultyCurve.getGridSize(currentLevel)
+        }
 
         val targetX = playerX + dx
         val targetY = playerY + dy
@@ -406,7 +587,24 @@ class MazeViewModel(
 
         // Persist level progress and unlock next level in Room database
         viewModelScope.launch {
-            repository.saveProgress(currentLevel, starsEarned, completionTimeMs, currentScore, stepsTaken)
+            if (!isSpecialStageActive) {
+                repository.saveProgress(currentLevel, starsEarned, completionTimeMs, currentScore, stepsTaken)
+            }
+        }
+
+        // Trigger automatic next maze transition countdown (3 seconds)
+        transitionJob?.cancel()
+        transitionJob = viewModelScope.launch {
+            for (i in 3 downTo 1) {
+                autoTransitionCountdown = i
+                delay(1000)
+            }
+            autoTransitionCountdown = null
+            if (isSpecialStageActive) {
+                currentScreen = GameScreen.SPECIAL_SECTION
+            } else {
+                startLevel(currentLevel + 1)
+            }
         }
     }
 

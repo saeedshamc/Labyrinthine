@@ -6,11 +6,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -89,6 +92,7 @@ fun MazeScreen(viewModel: MazeViewModel) {
                     GameScreen.LEVEL_SELECT -> LevelSelectView(viewModel, activePalette)
                     GameScreen.GAME_PLAY -> GameplayView(viewModel, activePalette)
                     GameScreen.SETTINGS -> SettingsView(viewModel, activePalette)
+                    GameScreen.SPECIAL_SECTION -> SpecialSectionView(viewModel, activePalette)
                 }
             }
 
@@ -322,6 +326,28 @@ fun WelcomeView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTier
                 Text(text = Localization.getString("settings", lang), fontSize = 14.sp)
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Special Section Button (Random Procedural Stage Generation)
+        Button(
+            onClick = { viewModel.currentScreen = GameScreen.SPECIAL_SECTION },
+            colors = ButtonDefaults.buttonColors(containerColor = palette.accent),
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(52.dp)
+                .testTag("special_section_button"),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (viewModel.isDarkTheme) Color.Black else Color.White, modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = Localization.getString("special_title", lang),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (viewModel.isDarkTheme) Color.Black else Color.White
+            )
+        }
     }
 }
 
@@ -336,6 +362,7 @@ fun SettingsView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         // Header Row
@@ -365,7 +392,7 @@ fun SettingsView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Options List Card
         Card(
@@ -465,8 +492,6 @@ fun SettingsView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     }
                 }
 
-
-
                 Divider(color = palette.text.copy(alpha = 0.1f))
 
                 // Option 4: Sound Toggle
@@ -542,7 +567,204 @@ fun SettingsView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Section: Ball Customization
+        Text(
+            text = if (lang == Localization.Language.FA) "سفارشی‌سازی گوی" else "Ball Customization",
+            color = palette.wallColor,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(0.5.dp, palette.wallColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                BallStyle.values().forEach { style ->
+                    val isUnlocked = viewModel.maxUnlockedLevel >= style.requiredLevel
+                    val isSelected = viewModel.selectedBallStyle == style
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isSelected) palette.accent.copy(alpha = 0.15f)
+                                else if (!isUnlocked) Color.Black.copy(alpha = 0.15f)
+                                else Color.Transparent
+                            )
+                            .clickable(enabled = isUnlocked) {
+                                viewModel.selectedBallStyle = style
+                            }
+                            .padding(12.dp)
+                            .testTag("ball_style_${style.name.lowercase()}"),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = palette.accent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else if (!isUnlocked) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Locked",
+                                    tint = palette.text.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.RadioButtonUnchecked,
+                                    contentDescription = "Unselected",
+                                    tint = palette.text.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = if (lang == Localization.Language.FA) style.displayNameFa else style.displayNameEn,
+                                    color = if (isUnlocked) palette.text else palette.text.copy(alpha = 0.4f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                if (!isUnlocked) {
+                                    Text(
+                                        text = if (lang == Localization.Language.FA) "باز شدن در مرحله ${Localization.formatNumbers(style.requiredLevel.toString(), lang)}" else "Unlocks at level ${style.requiredLevel}",
+                                        color = Color.Red.copy(alpha = 0.6f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(if (isUnlocked) palette.playerColor else palette.text.copy(alpha = 0.15f))
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Section: Trail Customization
+        Text(
+            text = if (lang == Localization.Language.FA) "رنگ ردپا" else "Trail Effect Color",
+            color = palette.wallColor,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(0.5.dp, palette.wallColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                TrailColorStyle.values().forEach { style ->
+                    val isUnlocked = viewModel.maxUnlockedLevel >= style.requiredLevel
+                    val isSelected = viewModel.selectedTrailColor == style
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isSelected) palette.accent.copy(alpha = 0.15f)
+                                else if (!isUnlocked) Color.Black.copy(alpha = 0.15f)
+                                else Color.Transparent
+                            )
+                            .clickable(enabled = isUnlocked) {
+                                viewModel.selectedTrailColor = style
+                            }
+                            .padding(12.dp)
+                            .testTag("trail_style_${style.name.lowercase()}"),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = palette.accent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else if (!isUnlocked) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Locked",
+                                    tint = palette.text.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.RadioButtonUnchecked,
+                                    contentDescription = "Unselected",
+                                    tint = palette.text.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = if (lang == Localization.Language.FA) style.displayNameFa else style.displayNameEn,
+                                    color = if (isUnlocked) palette.text else palette.text.copy(alpha = 0.4f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                if (!isUnlocked) {
+                                    Text(
+                                        text = if (lang == Localization.Language.FA) "باز شدن در مرحله ${Localization.formatNumbers(style.requiredLevel.toString(), lang)}" else "Unlocks at level ${style.requiredLevel}",
+                                        color = Color.Red.copy(alpha = 0.6f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, palette.text.copy(alpha = 0.2f), CircleShape)
+                                .background(if (isUnlocked) (style.color ?: palette.accent) else palette.text.copy(alpha = 0.15f))
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Reset Progression Trigger
         Button(
@@ -834,7 +1056,7 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Stats Row: Timer, Level details
+            // Stats Row: Timer, Level details, Back & Pause buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -843,28 +1065,56 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { viewModel.currentScreen = GameScreen.LEVEL_SELECT }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to Levels",
-                        tint = palette.wallColor
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        if (viewModel.isSpecialStageActive) {
+                            viewModel.currentScreen = GameScreen.SPECIAL_SECTION
+                        } else {
+                            viewModel.currentScreen = GameScreen.LEVEL_SELECT
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = palette.wallColor
+                        )
+                    }
+
+                    // Pause Button
+                    IconButton(
+                        onClick = { viewModel.isPaused = true },
+                        modifier = Modifier.testTag("pause_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause",
+                            tint = palette.wallColor
+                        )
+                    }
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = Localization.getString("level_number", lang, viewModel.currentLevel),
+                        text = if (viewModel.isSpecialStageActive) {
+                            viewModel.activeSpecialStageName
+                        } else {
+                            Localization.getString("level_number", lang, viewModel.currentLevel)
+                        },
                         color = palette.wallColor,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = Localization.getString(
-                            "grid_size",
-                            lang,
-                            DifficultyCurve.getGridSize(viewModel.currentLevel),
-                            DifficultyCurve.getGridSize(viewModel.currentLevel)
-                        ),
+                        text = if (viewModel.isSpecialStageActive) {
+                            "${grid.size} x ${grid.size}"
+                        } else {
+                            Localization.getString(
+                                "grid_size",
+                                lang,
+                                DifficultyCurve.getGridSize(viewModel.currentLevel),
+                                DifficultyCurve.getGridSize(viewModel.currentLevel)
+                            )
+                        },
                         color = palette.text.copy(alpha = 0.6f),
                         fontSize = 11.sp
                     )
@@ -878,7 +1128,11 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                 ) {
                     val tenths = (viewModel.gameTimeTicks % 10).toInt()
                     val totalSec = (viewModel.gameTimeTicks / 10).toInt()
-                    val (threeStarSec, twoStarSec) = DifficultyCurve.getStarThresholds(viewModel.currentLevel)
+                    val (threeStarSec, twoStarSec) = if (viewModel.isSpecialStageActive) {
+                        Pair(15, 30)
+                    } else {
+                        DifficultyCurve.getStarThresholds(viewModel.currentLevel)
+                    }
 
                     Row(
                         modifier = Modifier
@@ -941,6 +1195,53 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Smooth Neon Proximity Progress Bar
+            val proximityFraction = viewModel.proximityFraction
+            val animatedProximity by animateFloatAsState(
+                targetValue = proximityFraction,
+                animationSpec = tween(durationMillis = 200, easing = LinearOutSlowInEasing),
+                label = "proximity_progress"
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (lang == Localization.Language.FA) "فاصله تا خروج" else "Proximity to Exit",
+                        color = palette.text.copy(alpha = 0.7f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${(animatedProximity * 100).toInt()}%",
+                        color = palette.accent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { animatedProximity },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .testTag("proximity_progress_bar"),
+                    color = palette.accent,
+                    trackColor = palette.wallColor.copy(alpha = 0.15f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Central Canvas Area
             Box(
                 modifier = Modifier
@@ -964,11 +1265,14 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     controlScheme = viewModel.controlScheme,
                     onSwipeMove = { dx, dy -> viewModel.movePlayer(dx, dy) },
                     modifier = Modifier.fillMaxSize(),
-                    level = viewModel.currentLevel
+                    level = viewModel.currentLevel,
+                    ballStyle = viewModel.selectedBallStyle,
+                    trailColorStyle = viewModel.selectedTrailColor
                 )
 
                 // Render Optional Corner Mini-map Overlay for complex mazes (Tiers 3+)
-                if (viewModel.minimapEnabled && DifficultyCurve.getGridSize(viewModel.currentLevel) >= 21) {
+                val isComplex = if (viewModel.isSpecialStageActive) grid.size >= 15 else DifficultyCurve.getGridSize(viewModel.currentLevel) >= 21
+                if (viewModel.minimapEnabled && isComplex) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -990,7 +1294,7 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                 }
 
                 // Render Time Trial Leaderboard Overlay
-                if (viewModel.isTimeTrialMode) {
+                if (viewModel.isTimeTrialMode && !viewModel.isSpecialStageActive) {
                     LeaderboardOverlay(
                         viewModel = viewModel,
                         palette = palette,
@@ -998,6 +1302,105 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                             .align(Alignment.CenterStart)
                             .padding(start = 12.dp)
                     )
+                }
+
+                // BRIEF LEVEL COMPLETE OVERLAY WITH AUTO-TRANSITION COUNTDOWN
+                if (viewModel.levelCompleted) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        AnimatedVisibility(
+                            visible = viewModel.levelCompleted,
+                            enter = fadeIn(animationSpec = tween(400)) + scaleIn(initialScale = 0.85f, animationSpec = tween(400)),
+                            exit = fadeOut(animationSpec = tween(300))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.8f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth(0.85f)
+                                        .padding(16.dp)
+                                        .testTag("brief_complete_overlay"),
+                                    colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.92f)),
+                                    border = borderStroke(2.dp, palette.accent),
+                                    shape = RoundedCornerShape(24.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(24.dp)
+                                            .fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = palette.accent,
+                                            modifier = Modifier.size(56.dp)
+                                        )
+
+                                        Text(
+                                            text = Localization.getString("level_complete_brief", lang),
+                                            color = palette.accent,
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceAround
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = Localization.getString("time_taken", lang),
+                                                    color = palette.text.copy(alpha = 0.6f),
+                                                    fontSize = 12.sp
+                                                )
+                                                val finalSec = (viewModel.completionTimeMs / 1000f)
+                                                val displaySecStr = Localization.formatNumbers(String.format("%.1f", finalSec), lang)
+                                                Text(
+                                                    text = "${displaySecStr}s",
+                                                    color = palette.text,
+                                                    fontSize = 18.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = Localization.getString("score", lang),
+                                                    color = palette.text.copy(alpha = 0.6f),
+                                                    fontSize = 12.sp
+                                                )
+                                                val scoreStr = Localization.formatNumbers(viewModel.currentScore.toString(), lang)
+                                                Text(
+                                                    text = scoreStr,
+                                                    color = palette.text,
+                                                    fontSize = 18.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+
+                                        viewModel.autoTransitionCountdown?.let { secondsLeft ->
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            val countdownStr = Localization.getString("next_maze_in", lang, secondsLeft)
+                                            Text(
+                                                text = countdownStr,
+                                                color = palette.text.copy(alpha = 0.8f),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1014,9 +1417,353 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
             }
         }
 
-        // LEVEL COMPLETE MODAL DIALOG
-        if (viewModel.levelCompleted) {
+        // LEVEL COMPLETE FALLBACK FULL VIEW DIALOG
+        if (viewModel.levelCompleted && viewModel.autoTransitionCountdown == null) {
             LevelCompleteView(viewModel = viewModel, palette = palette)
+        }
+
+        // OVERLAY PAUSE MENU DIALOG
+        if (viewModel.isPaused) {
+            PauseMenuView(viewModel = viewModel, palette = palette)
+        }
+    }
+}
+
+/**
+ * --- 4. OVERLAY PAUSE MENU ---
+ */
+@Composable
+fun PauseMenuView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTierPalette) {
+    val lang = viewModel.currentLanguage
+    Dialog(
+        onDismissRequest = { viewModel.isPaused = false },
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(16.dp)
+                .testTag("pause_menu_dialog"),
+            colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.95f)),
+            border = borderStroke(2.dp, palette.wallColor),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PauseCircle,
+                    contentDescription = null,
+                    tint = palette.accent,
+                    modifier = Modifier.size(64.dp)
+                )
+
+                Text(
+                    text = Localization.getString("game_paused", lang),
+                    color = palette.wallColor,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = Localization.getString("paused_subtitle", lang),
+                    color = palette.text.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Resume Button
+                Button(
+                    onClick = { viewModel.isPaused = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.accent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("resume_button"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (viewModel.isDarkTheme) Color.Black else Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.getString("resume", lang),
+                        color = if (viewModel.isDarkTheme) Color.Black else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Restart Button
+                OutlinedButton(
+                    onClick = {
+                        viewModel.isPaused = false
+                        if (viewModel.isSpecialStageActive) {
+                            val activeStage = viewModel.specialStagesList.find { it.id == viewModel.activeSpecialStageId }
+                            if (activeStage != null) {
+                                viewModel.startSpecialStage(activeStage)
+                            }
+                        } else {
+                            viewModel.startLevel(viewModel.currentLevel)
+                        }
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.text),
+                    border = borderStroke(1.dp, palette.text.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("restart_button"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.getString("restart_level", lang),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Return to Menu Button
+                OutlinedButton(
+                    onClick = {
+                        viewModel.isPaused = false
+                        if (viewModel.isSpecialStageActive) {
+                            viewModel.currentScreen = GameScreen.SPECIAL_SECTION
+                        } else {
+                            viewModel.currentScreen = GameScreen.LEVEL_SELECT
+                        }
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.text),
+                    border = borderStroke(1.dp, palette.text.copy(alpha = 0.3f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .testTag("main_menu_button"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Home, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.getString("main_menu", lang),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * --- 4.5. SPECIAL SECTION SCREEN ---
+ */
+@Composable
+fun SpecialSectionView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTierPalette) {
+    val lang = viewModel.currentLanguage
+    val list = viewModel.specialStagesList
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(16.dp)
+    ) {
+        // Header bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { viewModel.currentScreen = GameScreen.WELCOME },
+                modifier = Modifier.testTag("special_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = palette.wallColor
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = Localization.getString("special_title", lang),
+                color = palette.wallColor,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Description Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .testTag("special_info_card"),
+            colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.5f)),
+            border = borderStroke(1.dp, palette.wallColor.copy(alpha = 0.25f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = palette.accent,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = Localization.getString("special_title", lang),
+                        color = palette.wallColor,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Text(
+                    text = Localization.getString("special_desc", lang),
+                    color = palette.text.copy(alpha = 0.8f),
+                    fontSize = 13.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Create random stage button
+        Button(
+            onClick = { viewModel.generateAndSaveRandomSpecialStage(lang, playImmediately = true) },
+            colors = ButtonDefaults.buttonColors(containerColor = palette.accent),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .testTag("generate_special_stage_button"),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, tint = if (viewModel.isDarkTheme) Color.Black else Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = Localization.getString("generate_random_maze", lang),
+                color = if (viewModel.isDarkTheme) Color.Black else Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Saved stages list title
+        Text(
+            text = Localization.getString("special_section", lang),
+            color = palette.wallColor,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+
+        // List
+        if (list.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = Localization.getString("no_special_mazes", lang),
+                    color = palette.text.copy(alpha = 0.5f),
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(list) { stage ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("special_stage_card_${stage.id}"),
+                        colors = CardDefaults.cardColors(containerColor = palette.cardBg.copy(alpha = 0.4f)),
+                        border = borderStroke(1.dp, palette.wallColor.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = stage.name,
+                                    color = palette.text,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${stage.gridSize} x ${stage.gridSize} • Seed: ${stage.seed}",
+                                    color = palette.text.copy(alpha = 0.6f),
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Play stage button
+                                IconButton(
+                                    onClick = { viewModel.startSpecialStage(stage) },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(palette.accent.copy(alpha = 0.15f), CircleShape)
+                                        .testTag("play_special_${stage.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = "Play",
+                                        tint = palette.accent,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                // Delete stage button
+                                IconButton(
+                                    onClick = { viewModel.deleteSpecialStage(stage.id) },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Color.Red.copy(alpha = 0.1f), CircleShape)
+                                        .testTag("delete_special_${stage.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = Color.Red,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1150,8 +1897,8 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
  * Custom Modifier extending PointerInput to trigger clicks continuously while held down.
  */
 fun Modifier.holdToRepeat(
-    initialDelay: Long = 250L,
-    repeatDelay: Long = 90L,
+    initialDelay: Long = 130L,
+    repeatDelay: Long = 40L,
     onClick: () -> Unit
 ): Modifier = this.pointerInput(Unit) {
     coroutineScope {

@@ -33,5 +33,19 @@ interface ProgressDao {
 
     @Query("DELETE FROM level_runs")
     suspend fun clearAllRuns()
+
+    // Special custom random stage operations
+    @Query("SELECT * FROM special_stages ORDER BY timestamp DESC")
+    fun getAllSpecialStages(): Flow<List<SpecialStage>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSpecialStage(stage: SpecialStage): Long
+
+    @Query("DELETE FROM special_stages WHERE id = :id")
+    suspend fun deleteSpecialStage(id: Long)
+
+    @Query("DELETE FROM special_stages")
+    suspend fun clearAllSpecialStages()
 }
+
 

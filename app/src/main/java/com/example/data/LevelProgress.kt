@@ -30,3 +30,16 @@ data class LevelRun(
     val timestamp: Long
 )
 
+/**
+ * Room Entity representing a custom randomly generated stage in the Special Section.
+ */
+@Entity(tableName = "special_stages")
+data class SpecialStage(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val name: String,
+    val seed: Long,
+    val gridSize: Int,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+

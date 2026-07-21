@@ -119,7 +119,24 @@ object Localization {
         "tab_medium" to "Medium (51-150)",
         "tab_hard" to "Hard (151-400)",
         "tab_expert" to "Expert (401-1000)",
-        "tab_endless" to "Endless (1001+)"
+        "tab_endless" to "Endless (1001+)",
+        "pause" to "Pause",
+        "resume" to "Resume",
+        "game_paused" to "Game Paused",
+        "paused_subtitle" to "Keep searching or take a deep breath!",
+        "restart_level" to "Restart",
+        "main_menu" to "Main Menu",
+        "ball_style" to "Ball Appearance",
+        "trail_style" to "Trail Color",
+        "special_section" to "Special Mazes",
+        "generate_random_maze" to "Generate Random Maze",
+        "no_special_mazes" to "No custom mazes generated yet.",
+        "special_title" to "Special Arena",
+        "special_desc" to "Generate infinitely randomized procedurals of any scale and replay them anytime!",
+        "level_complete_brief" to "Level Complete!",
+        "next_maze_in" to "Next maze in %d...",
+        "locked" to "Locked (Reach Level %d)",
+        "unlocked" to "Unlocked!"
     )
 
     private val FA_STRINGS = mapOf(
@@ -185,6 +202,23 @@ object Localization {
         "tab_medium" to "متوسط (۵۱-۱۵۰)",
         "tab_hard" to "سخت (۱۵۱-۴۰۰)",
         "tab_expert" to "حرفه‌ای (۴۰۱-۱۰۰۰)",
-        "tab_endless" to "بی‌پایان (۱۰۰۱+)"
+        "tab_endless" to "بی‌پایان (۱۰۰۱+)",
+        "pause" to "توقف",
+        "resume" to "ادامه",
+        "game_paused" to "بازی متوقف شد",
+        "paused_subtitle" to "به جستجو ادامه دهید یا کمی نفس تازه کنید!",
+        "restart_level" to "شروع مجدد",
+        "main_menu" to "منوی اصلی",
+        "ball_style" to "ظاهر توپ",
+        "trail_style" to "رنگ رد حرکت",
+        "special_section" to "مارپیچ‌های ویژه",
+        "generate_random_maze" to "ساخت مارپیچ رندوم",
+        "no_special_mazes" to "هنوز مارپیچ ویژه‌ای ساخته نشده است.",
+        "special_title" to "بخش ویژه",
+        "special_desc" to "مارپیچ‌های کاملاً تصادفی بسازید و آن‌ها را در هر زمان دوباره بازی کنید!",
+        "level_complete_brief" to "مرحله به پایان رسید!",
+        "next_maze_in" to "مارپیچ بعدی در %d...",
+        "locked" to "قفل شده (مرحله %d)",
+        "unlocked" to "باز شده!"
     )
 }
