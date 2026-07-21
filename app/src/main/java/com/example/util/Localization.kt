@@ -111,7 +111,12 @@ object Localization {
         "rank_2" to "2nd",
         "rank_3" to "3rd",
         "rank_4" to "4th",
-        "rank_5" to "5th"
+        "rank_5" to "5th",
+        "tab_beginner" to "Beginner (1-50)",
+        "tab_medium" to "Medium (51-150)",
+        "tab_hard" to "Hard (151-400)",
+        "tab_expert" to "Expert (401-1000)",
+        "tab_endless" to "Endless (1001+)"
     )
 
     private val FA_STRINGS = mapOf(
@@ -169,6 +174,11 @@ object Localization {
         "rank_2" to "دوم",
         "rank_3" to "سوم",
         "rank_4" to "چهارم",
-        "rank_5" to "پنجم"
+        "rank_5" to "پنجم",
+        "tab_beginner" to "مبتدی (۱-۵۰)",
+        "tab_medium" to "متوسط (۵۱-۱۵۰)",
+        "tab_hard" to "سخت (۱۵۱-۴۰۰)",
+        "tab_expert" to "حرفه‌ای (۴۰۱-۱۰۰۰)",
+        "tab_endless" to "بی‌پایان (۱۰۰۱+)"
     )
 }

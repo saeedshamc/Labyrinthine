@@ -48,6 +48,7 @@ import kotlin.math.min
 import kotlin.math.max
 import androidx.compose.foundation.Canvas
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -575,6 +576,43 @@ fun LevelSelectView(viewModel: MazeViewModel, palette: com.example.ui.theme.Maze
         progressList.associateBy { it.level }
     }
 
+    val maxUnlockedLevel = remember(progressList) {
+        progressList.filter { it.isUnlocked }.maxOfOrNull { it.level } ?: 1
+    }
+
+    val categories = remember {
+        listOf(
+            Pair(0, "tab_beginner"),
+            Pair(1, "tab_medium"),
+            Pair(2, "tab_hard"),
+            Pair(3, "tab_expert"),
+            Pair(4, "tab_endless")
+        )
+    }
+
+    val initialCategory = remember(maxUnlockedLevel) {
+        when {
+            maxUnlockedLevel <= 50 -> 0
+            maxUnlockedLevel <= 150 -> 1
+            maxUnlockedLevel <= 400 -> 2
+            maxUnlockedLevel <= 1000 -> 3
+            else -> 4
+        }
+    }
+
+    var selectedCategoryState by remember { mutableStateOf<Int?>(null) }
+    val selectedCategory = selectedCategoryState ?: initialCategory
+
+    val levels = remember(selectedCategory, maxUnlockedLevel) {
+        when (selectedCategory) {
+            0 -> (1..50).toList()
+            1 -> (51..150).toList()
+            2 -> (151..400).toList()
+            3 -> (401..1000).toList()
+            else -> (1001..kotlin.math.max(1050, maxUnlockedLevel)).toList()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -624,10 +662,56 @@ fun LevelSelectView(viewModel: MazeViewModel, palette: com.example.ui.theme.Maze
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Level selection procedural grid (displaying up to 200 levels)
-        val levels = (1..200).toList()
+        // Category tabs filter chips row
+        LazyRow(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+        ) {
+            items(categories.size) { index ->
+                val (catId, stringKey) = categories[index]
+                val isSelected = selectedCategory == catId
+                val label = Localization.getString(stringKey, lang)
+                
+                val isCatUnlocked = when (catId) {
+                    0 -> true
+                    1 -> maxUnlockedLevel > 50
+                    2 -> maxUnlockedLevel > 150
+                    3 -> maxUnlockedLevel > 400
+                    else -> maxUnlockedLevel > 1000
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (isSelected) palette.accent
+                            else if (isCatUnlocked) palette.cardBg.copy(alpha = 0.5f)
+                            else Color.Gray.copy(alpha = 0.1f)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) palette.accent else if (isCatUnlocked) palette.wallColor.copy(alpha = 0.3f) else Color.Gray.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .clickable(enabled = isCatUnlocked) {
+                            selectedCategoryState = catId
+                        }
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) (if (viewModel.isDarkTheme) Color.Black else Color.White) else if (isCatUnlocked) palette.text else palette.text.copy(alpha = 0.3f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(80.dp),

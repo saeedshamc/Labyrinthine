@@ -13,21 +13,25 @@ object DifficultyCurve {
     fun getGridSize(level: Int): Int {
         val rawSize = when {
             level in 1..10 -> 5 + (level - 1) * 1 // 5 to 14
-            level in 11..30 -> {
-                val ratio = (level - 11) / 19f
-                11 + (ratio * 10).toInt() // 11 to 21
+            level in 11..50 -> {
+                val ratio = (level - 11) / 39f
+                15 + (ratio * 8).toInt() // 15 to 23
             }
-            level in 31..60 -> {
-                val ratio = (level - 31) / 29f
-                23 + (ratio * 18).toInt() // 23 to 41
+            level in 51..150 -> {
+                val ratio = (level - 51) / 99f
+                25 + (ratio * 12).toInt() // 25 to 37
             }
-            level in 61..100 -> {
-                val ratio = (level - 61) / 39f
-                43 + (ratio * 12).toInt() // 43 to 55
+            level in 151..400 -> {
+                val ratio = (level - 151) / 249f
+                39 + (ratio * 14).toInt() // 39 to 53
+            }
+            level in 401..1000 -> {
+                val ratio = (level - 401) / 599f
+                55 + (ratio * 20).toInt() // 55 to 75
             }
             else -> {
-                // endless scaling up to 80
-                min(55 + ((level - 100) * 0.4).toInt(), 80)
+                // endless scaling beyond 1000 getting harder and harder
+                min(75 + ((level - 1000) / 20), 89)
             }
         }
         // Force odd size to make maze generation and entry/exit mapping look symmetrically perfect
@@ -39,9 +43,9 @@ object DifficultyCurve {
      */
     fun getTier(level: Int): Int {
         return when {
-            level <= 10 -> 1
-            level <= 30 -> 2
-            level <= 60 -> 3
+            level <= 20 -> 1
+            level <= 100 -> 2
+            level <= 400 -> 3
             else -> 4
         }
     }
