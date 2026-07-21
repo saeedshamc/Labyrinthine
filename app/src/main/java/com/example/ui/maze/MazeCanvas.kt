@@ -70,16 +70,16 @@ fun MazeCanvas(
     val animPlayerX by animateFloatAsState(
         targetValue = playerX.toFloat(),
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "playerX"
     )
     val animPlayerY by animateFloatAsState(
         targetValue = playerY.toFloat(),
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "playerY"
     )
@@ -194,21 +194,8 @@ fun MazeCanvas(
             }
 
             // --- 2. DRAW ENTRANCE / EXIT PORTALS ---
-            // Draw Pulsing Exit
-            val ex = exitX * cellSize + cameraX + (cellSize / 2f)
-            val ey = exitY * cellSize + cameraY + (cellSize / 2f)
-            val exitRadius = (cellSize * 0.3f) * pulseScale
-
-            // Exit Glow shadow using native canvas Paint
-            drawIntoCanvas { canvas ->
-                val paint = Paint().asFrameworkPaint().apply {
-                    color = palette.exitColor.toArgb()
-                    setShadowLayer(cellSize * 0.4f * pulseScale, 0f, 0f, palette.exitColor.toArgb())
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = (cellSize * 0.12f)
-                }
-                canvas.nativeCanvas.drawCircle(ex, ey, exitRadius, paint)
-            }
+            // Exit visual indicator has been hidden as per player request to hide exit location.
+            // Players must discover the physical doorway gap leading outside the maze borders!
 
             // --- 3. DRAW MAZE WALLS (PREMIUM GLOW EFFECT) ---
             val wallStrokeWidth = max(2f, cellSize * 0.10f)

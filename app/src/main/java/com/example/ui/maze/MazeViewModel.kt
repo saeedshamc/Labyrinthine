@@ -194,6 +194,9 @@ class MazeViewModel(
         exitX = size - 1
         exitY = size - 1
         
+        // Carve out the physical exit door (remove outer bottom wall of the exit cell)
+        generatedGrid[exitX][exitY].bottomWall = false
+        
         playerTrail = listOf(Pair(0, 0))
         levelCompleted = false
         starsEarned = 0
@@ -237,6 +240,22 @@ class MazeViewModel(
         val targetX = playerX + dx
         val targetY = playerY + dy
 
+        // Special case: check if player is physically exiting the maze boundaries from the exit cell
+        if (playerX == exitX && playerY == exitY) {
+            val cell = grid[playerX][playerY]
+            val isExiting = when {
+                dx == 0 && dy == 1 && !cell.bottomWall && targetY == size -> true
+                dx == 1 && dy == 0 && !cell.rightWall && targetX == size -> true
+                else -> false
+            }
+            if (isExiting) {
+                playerX = targetX
+                playerY = targetY
+                completeLevel()
+                return
+            }
+        }
+
         // Verify boundaries
         if (targetX !in 0 until size || targetY !in 0 until size) return
 
@@ -261,11 +280,6 @@ class MazeViewModel(
             }
             
             triggerHapticClick()
-
-            // Check if player has reached the exit
-            if (playerX == exitX && playerY == exitY) {
-                completeLevel()
-            }
         }
     }
 
@@ -346,28 +360,36 @@ class MazeViewModel(
 
     private fun triggerHapticClick() {
         if (!hapticEnabled) return
-        val vibrator = getApplication<Application>().getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        vibrator?.let {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                it.vibrate(android.os.VibrationEffect.createOneShot(10, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                it.vibrate(10)
+        try {
+            val vibrator = getApplication<Application>().getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    it.vibrate(android.os.VibrationEffect.createOneShot(10, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(10)
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     private fun triggerHapticCompletion() {
         if (!hapticEnabled) return
-        val vibrator = getApplication<Application>().getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        vibrator?.let {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val pattern = longArrayOf(0, 50, 40, 100)
-                it.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1))
-            } else {
-                @Suppress("DEPRECATION")
-                it.vibrate(150)
+        try {
+            val vibrator = getApplication<Application>().getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    val pattern = longArrayOf(0, 50, 40, 100)
+                    it.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(150)
+                }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

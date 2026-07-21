@@ -48,6 +48,11 @@ import kotlin.math.min
 import kotlin.math.max
 import androidx.compose.foundation.Canvas
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun MazeScreen(viewModel: MazeViewModel) {
@@ -621,8 +626,8 @@ fun LevelSelectView(viewModel: MazeViewModel, palette: com.example.ui.theme.Maze
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Level selection procedural grid (displaying up to 100 levels)
-        val levels = (1..100).toList()
+        // Level selection procedural grid (displaying up to 200 levels)
+        val levels = (1..200).toList()
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(80.dp),
@@ -869,16 +874,6 @@ fun MinimapCanvas(
     Canvas(modifier = Modifier.fillMaxSize()) {
         val mapCellSize = min(this.size.width, this.size.height) / gridSize.toFloat()
 
-        // Draw exit point in red/gold
-        drawCircle(
-            color = palette.exitColor,
-            radius = max(2f, mapCellSize * 0.4f),
-            center = Offset(
-                exitX * mapCellSize + mapCellSize / 2f,
-                exitY * mapCellSize + mapCellSize / 2f
-            )
-        )
-
         // Draw solid wall outlines
         grid.forEach { row ->
             row.forEach { cell ->
@@ -926,45 +921,53 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
         contentAlignment = Alignment.Center
     ) {
         // D-Pad North
-        IconButton(
-            onClick = { viewModel.movePlayer(0, -1) },
+        Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(56.dp)
-                .testTag("joystick_up")
+                .clip(CircleShape)
+                .holdToRepeat(onClick = { viewModel.movePlayer(0, -1) })
+                .testTag("joystick_up"),
+            contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Up", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad East
-        IconButton(
-            onClick = { viewModel.movePlayer(1, 0) },
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .size(56.dp)
-                .testTag("joystick_right")
+                .clip(CircleShape)
+                .holdToRepeat(onClick = { viewModel.movePlayer(1, 0) })
+                .testTag("joystick_right"),
+            contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Right", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad South
-        IconButton(
-            onClick = { viewModel.movePlayer(0, 1) },
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .size(56.dp)
-                .testTag("joystick_down")
+                .clip(CircleShape)
+                .holdToRepeat(onClick = { viewModel.movePlayer(0, 1) })
+                .testTag("joystick_down"),
+            contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Down", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
 
         // D-Pad West
-        IconButton(
-            onClick = { viewModel.movePlayer(-1, 0) },
+        Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
                 .size(56.dp)
-                .testTag("joystick_left")
+                .clip(CircleShape)
+                .holdToRepeat(onClick = { viewModel.movePlayer(-1, 0) })
+                .testTag("joystick_left"),
+            contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Left", tint = palette.wallColor, modifier = Modifier.size(38.dp))
         }
@@ -979,6 +982,32 @@ fun JoystickControls(viewModel: MazeViewModel, palette: com.example.ui.theme.Maz
         )
     }
 }
+
+/**
+ * Custom Modifier extending PointerInput to trigger clicks continuously while held down.
+ */
+fun Modifier.holdToRepeat(
+    initialDelay: Long = 250L,
+    repeatDelay: Long = 90L,
+    onClick: () -> Unit
+): Modifier = this.pointerInput(Unit) {
+    coroutineScope {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            val job = launch {
+                onClick()
+                delay(initialDelay)
+                while (true) {
+                    onClick()
+                    delay(repeatDelay)
+                }
+            }
+            waitForUpOrCancellation()
+            job.cancel()
+        }
+    }
+}
+
 
 /**
  * --- 7. CELEBRATORY LEVEL COMPLETE MODAL ---
