@@ -62,7 +62,8 @@ fun MazeCanvas(
     particles: List<Particle>,
     controlScheme: ControlScheme = ControlScheme.SWIPE,
     onSwipeMove: (dx: Int, dy: Int) -> Unit = { _, _ -> },
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    level: Int = 1
 ) {
     val gridSize = grid.size
 
@@ -200,8 +201,9 @@ fun MazeCanvas(
             // --- 3. DRAW MAZE WALLS (PREMIUM GLOW EFFECT) ---
             val wallStrokeWidth = max(2f, cellSize * 0.10f)
             val glowWidth = wallStrokeWidth * 2.8f
+            val tier = DifficultyCurve.getTier(level)
 
-            // Double Pass Wall Rendering: Pass 1 is Glow shadow, Pass 2 is Core Solid Line
+            // Double Pass Wall Rendering: Pass 1 is Glow shadow, Pass 2 is Core Solid/Textured Line
             grid.forEach { row ->
                 row.forEach { cell ->
                     val cx = cell.x * cellSize + cameraX
@@ -209,19 +211,19 @@ fun MazeCanvas(
 
                     // Top Wall
                     if (cell.topWall) {
-                        drawMazeWall(cx, cy, cx + cellSize, cy, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor)
+                        drawMazeWall(cx, cy, cx + cellSize, cy, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor, tier)
                     }
                     // Bottom Wall
                     if (cell.bottomWall) {
-                        drawMazeWall(cx, cy + cellSize, cx + cellSize, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor)
+                        drawMazeWall(cx, cy + cellSize, cx + cellSize, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor, tier)
                     }
                     // Left Wall
                     if (cell.leftWall) {
-                        drawMazeWall(cx, cy, cx, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor)
+                        drawMazeWall(cx, cy, cx, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor, tier)
                     }
                     // Right Wall
                     if (cell.rightWall) {
-                        drawMazeWall(cx + cellSize, cy, cx + cellSize, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor)
+                        drawMazeWall(cx + cellSize, cy, cx + cellSize, cy + cellSize, wallStrokeWidth, glowWidth, palette.wallColor, palette.wallGlowColor, tier)
                     }
                 }
             }
@@ -311,7 +313,7 @@ fun MazeCanvas(
 }
 
 /**
- * Extension function to draw a line segment with dual-pass bloom glow.
+ * Extension function to draw a line segment with dual-pass bloom glow and tier-based procedural textures.
  */
 private fun DrawScope.drawMazeWall(
     startX: Float,
@@ -321,9 +323,10 @@ private fun DrawScope.drawMazeWall(
     strokeWidth: Float,
     glowWidth: Float,
     coreColor: Color,
-    glowColor: Color
+    glowColor: Color,
+    tier: Int
 ) {
-    // Pass 1: Draw Thick semi-transparent glow path
+    // Pass 1: Draw Thick semi-transparent glow path (all tiers get gorgeous glow)
     drawLine(
         color = glowColor,
         start = Offset(startX, startY),
@@ -332,12 +335,127 @@ private fun DrawScope.drawMazeWall(
         cap = StrokeCap.Round
     )
 
-    // Pass 2: Draw High-intensity solid core path
-    drawLine(
-        color = coreColor,
-        start = Offset(startX, startY),
-        end = Offset(endX, endY),
-        strokeWidth = strokeWidth,
-        cap = StrokeCap.Round
-    )
+    // Pass 2: Core line based on procedural difficulty level (tier)
+    when (tier) {
+        1 -> {
+            // Tier 1 (Novice): Sleek, solid high-intensity neon core path
+            drawLine(
+                color = coreColor,
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
+            )
+        }
+        2 -> {
+            // Tier 2 (Adventurer): Dashed/Tech-line style texture to represent complex pathways
+            val isHorizontal = Math.abs(startY - endY) < 0.1f
+            val length = if (isHorizontal) Math.abs(startX - endX) else Math.abs(startY - endY)
+            val dashLength = strokeWidth * 3f
+            val gapLength = strokeWidth * 1.5f
+            val totalPeriod = dashLength + gapLength
+            
+            var currentPos = 0f
+            while (currentPos < length) {
+                val nextDash = kotlin.math.min(currentPos + dashLength, length)
+                val segmentStart = if (isHorizontal) {
+                    Offset(startX + currentPos, startY)
+                } else {
+                    Offset(startX, startY + currentPos)
+                }
+                val segmentEnd = if (isHorizontal) {
+                    Offset(startX + nextDash, startY)
+                } else {
+                    Offset(startX, startY + nextDash)
+                }
+                drawLine(
+                    color = coreColor,
+                    start = segmentStart,
+                    end = segmentEnd,
+                    strokeWidth = strokeWidth,
+                    cap = StrokeCap.Round
+                )
+                currentPos += totalPeriod
+            }
+        }
+        3 -> {
+            // Tier 3 (Master): Textured brick pattern with physical masonry tick markers
+            // First, draw the core wall line
+            drawLine(
+                color = coreColor,
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
+            )
+            // Draw perpendicular tick marks along the wall at regular intervals
+            val isHorizontal = Math.abs(startY - endY) < 0.1f
+            val length = if (isHorizontal) Math.abs(startX - endX) else Math.abs(startY - endY)
+            val interval = strokeWidth * 4f
+            val tickLength = strokeWidth * 1.5f
+            
+            var currentPos = interval / 2f
+            while (currentPos < length - 1f) {
+                val midX = if (isHorizontal) startX + currentPos else startX
+                val midY = if (isHorizontal) startY else startY + currentPos
+                
+                val tickStart = if (isHorizontal) {
+                    Offset(midX, midY - tickLength)
+                } else {
+                    Offset(midX - tickLength, midY)
+                }
+                val tickEnd = if (isHorizontal) {
+                    Offset(midX, midY + tickLength)
+                } else {
+                    Offset(midX + tickLength, midY)
+                }
+                drawLine(
+                    color = coreColor.copy(alpha = 0.8f),
+                    start = tickStart,
+                    end = tickEnd,
+                    strokeWidth = strokeWidth * 0.6f,
+                    cap = StrokeCap.Round
+                )
+                currentPos += interval
+            }
+        }
+        else -> {
+            // Tier 4 (Insane/Expert): Overlapping volcanic dual-line hazard stripes
+            // Draw base thick lava core
+            drawLine(
+                color = coreColor,
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
+            )
+            // Draw secondary hot high-intensity core line inside it
+            drawLine(
+                color = Color.White.copy(alpha = 0.85f),
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+                strokeWidth = strokeWidth * 0.4f,
+                cap = StrokeCap.Round
+            )
+            // Add diagonal orange hazard warning markings along the wall
+            val isHorizontal = Math.abs(startY - endY) < 0.1f
+            val length = if (isHorizontal) Math.abs(startX - endX) else Math.abs(startY - endY)
+            val interval = strokeWidth * 6f
+            var currentPos = interval / 3f
+            while (currentPos < length - 1f) {
+                val midX = if (isHorizontal) startX + currentPos else startX
+                val midY = if (isHorizontal) startY else startY + currentPos
+                val hStart = Offset(midX - strokeWidth, midY - strokeWidth)
+                val hEnd = Offset(midX + strokeWidth, midY + strokeWidth)
+                drawLine(
+                    color = Color(0xFFF59E0B),
+                    start = hStart,
+                    end = hEnd,
+                    strokeWidth = strokeWidth * 0.4f,
+                    cap = StrokeCap.Round
+                )
+                currentPos += interval
+            }
+        }
+    }
 }

@@ -15,3 +15,18 @@ data class LevelProgress(
     val highScore: Int = 0,
     val bestSteps: Int = 0
 )
+
+/**
+ * Room Entity representing a single completed level run to populate a leaderboard.
+ */
+@Entity(tableName = "level_runs")
+data class LevelRun(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val level: Int,
+    val timeMs: Long,
+    val steps: Int,
+    val score: Int,
+    val playerName: String,
+    val timestamp: Long
+)
+

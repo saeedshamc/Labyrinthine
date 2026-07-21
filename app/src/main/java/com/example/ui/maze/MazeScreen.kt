@@ -91,6 +91,33 @@ fun MazeScreen(viewModel: MazeViewModel) {
                     GameScreen.SETTINGS -> SettingsView(viewModel, activePalette)
                 }
             }
+
+            // SEAMLESS FADE-IN / FADE-OUT LEVEL TRANSITION OVERLAY
+            val transitionAlpha by animateFloatAsState(
+                targetValue = if (viewModel.isTransitioning) 1f else 0f,
+                animationSpec = tween(durationMillis = 300, easing = LinearEasing),
+                label = "level_transition_fade"
+            )
+
+            if (transitionAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = transitionAlpha))
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown()
+                                down.consume()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = activePalette.accent,
+                        strokeWidth = 4.dp
+                    )
+                }
+            }
         }
     }
 }
@@ -936,7 +963,8 @@ fun GameplayView(viewModel: MazeViewModel, palette: com.example.ui.theme.MazeTie
                     particles = viewModel.activeParticles,
                     controlScheme = viewModel.controlScheme,
                     onSwipeMove = { dx, dy -> viewModel.movePlayer(dx, dy) },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    level = viewModel.currentLevel
                 )
 
                 // Render Optional Corner Mini-map Overlay for complex mazes (Tiers 3+)

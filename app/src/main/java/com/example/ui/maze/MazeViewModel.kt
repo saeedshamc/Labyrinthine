@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.LevelProgress
+import com.example.data.LevelRun
 import com.example.data.MazeCell
 import com.example.data.MazeGenerator
 import com.example.data.ProgressRepository
@@ -101,6 +102,7 @@ class MazeViewModel(
 
     // Current navigation state
     var currentScreen by mutableStateOf(GameScreen.WELCOME)
+    var isTransitioning by mutableStateOf(false)
 
     // Persistent Level Progression state Flow
     val levelProgressList: StateFlow<List<LevelProgress>> = repository.allProgress
@@ -125,33 +127,60 @@ class MazeViewModel(
         val comp4Time = (baseSec * 1.40 * 1000).toLong() // Beginner/Ghost
 
         val rawList = mutableListOf<RawEntry>()
+        
+        // Add database runs if present
+        if (topRunsForCurrentLevel.isNotEmpty()) {
+            topRunsForCurrentLevel.forEach { run ->
+                rawList.add(RawEntry("You", run.timeMs, isUser = true, isPB = false))
+            }
+        } else {
+            // Backwards compatibility/fallback: include single personal best from LevelProgress
+            val pbTimeMs = levelProgressList.value.find { it.level == currentLevel }?.bestTimeMs ?: 0L
+            if (pbTimeMs > 0L) {
+                rawList.add(RawEntry("You", pbTimeMs, isUser = true, isPB = true))
+            }
+        }
+
+        // Add default virtual competitors
         rawList.add(RawEntry("LabyrinthLegend", comp1Time, isUser = false, isPB = false))
         rawList.add(RawEntry("CyberGlider", comp2Time, isUser = false, isPB = false))
         rawList.add(RawEntry("NeonRacer", comp3Time, isUser = false, isPB = false))
         rawList.add(RawEntry("ShadowRunner", comp4Time, isUser = false, isPB = false))
 
-        // Include user's personal best if they have completed this level before
-        val pbTimeMs = levelProgressList.value.find { it.level == currentLevel }?.bestTimeMs ?: 0L
-        if (pbTimeMs > 0L) {
-            rawList.add(RawEntry("Personal Best", pbTimeMs, isUser = false, isPB = true))
+        // Add current active run position if active and running
+        if (activeTimeMs > 0L) {
+            rawList.add(RawEntry("You (Current)", activeTimeMs, isUser = true, isPB = false))
         }
-
-        // Add current active run position
-        rawList.add(RawEntry("You", activeTimeMs, isUser = true, isPB = false))
 
         // Sort ascending by time
         val sortedList = rawList.sortedBy { it.timeMs }
 
-        // Map to rank and output LeaderboardEntry elements
-        return sortedList.mapIndexed { index, entry ->
-            LeaderboardEntry(
-                rank = index + 1,
-                name = entry.name,
-                timeMs = entry.timeMs,
-                isUser = entry.isUser,
-                isPersonalBest = entry.isPB
-            )
+        // Take top 5 and assign ranks
+        val minUserTime = if (topRunsForCurrentLevel.isNotEmpty()) {
+            topRunsForCurrentLevel.minOf { it.timeMs }
+        } else {
+            levelProgressList.value.find { it.level == currentLevel }?.bestTimeMs ?: Long.MAX_VALUE
         }
+
+        val finalEntries = mutableListOf<LeaderboardEntry>()
+        var rank = 1
+        for (entry in sortedList) {
+            if (rank > 5) break
+            
+            val isPb = entry.isPB || (entry.isUser && entry.name != "You (Current)" && entry.timeMs <= minUserTime)
+            
+            finalEntries.add(
+                LeaderboardEntry(
+                    rank = rank,
+                    name = entry.name,
+                    timeMs = entry.timeMs,
+                    isUser = entry.isUser,
+                    isPersonalBest = isPb
+                )
+            )
+            rank++
+        }
+        return finalEntries
     }
 
     // Active gameplay variables
@@ -173,6 +202,7 @@ class MazeViewModel(
     var completionTimeMs by mutableStateOf(0L)
     var stepsTaken by mutableStateOf(0)
     var currentScore by mutableStateOf(0)
+    var topRunsForCurrentLevel by mutableStateOf<List<LevelRun>>(emptyList())
 
     // Particle explosions on level completion
     var activeParticles by mutableStateOf<List<Particle>>(emptyList())
@@ -180,6 +210,16 @@ class MazeViewModel(
     // Coroutine Job for the running game timer and particles
     private var timerJob: Job? = null
     private var particlesJob: Job? = null
+    private var topRunsJob: Job? = null
+
+    fun observeTopRuns(level: Int) {
+        topRunsJob?.cancel()
+        topRunsJob = viewModelScope.launch {
+            repository.getTopRunsForLevel(level).collect {
+                topRunsForCurrentLevel = it
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -191,54 +231,61 @@ class MazeViewModel(
      * Prepares and starts a specific level.
      */
     fun startLevel(level: Int) {
-        currentLevel = level
-        val size = DifficultyCurve.getGridSize(level)
-        
-        // Generate procedural maze
-        val generatedGrid = MazeGenerator.generate(size, size, seed = level.toLong() * 9997L)
-        mazeGrid = generatedGrid
-        
-        // Initialize player position (entrance: top-left corner)
-        playerX = 0
-        playerY = 0
-        
-        // Exit is placed randomly and deterministically on one of the outer borders, far from (0,0)
-        val random = java.util.Random(level.toLong() * 12345L)
-        val edgeChoices = if (size >= 11) 4 else 2
-        val edge = random.nextInt(edgeChoices)
-        when (edge) {
-            0 -> { // Bottom edge
-                exitX = size / 2 + random.nextInt(size - size / 2)
-                exitY = size - 1
-                generatedGrid[exitX][exitY].bottomWall = false
+        viewModelScope.launch {
+            isTransitioning = true
+            delay(350) // Allow overlay fade-in transition to cover the screen
+            currentLevel = level
+            observeTopRuns(level)
+            val size = DifficultyCurve.getGridSize(level)
+            
+            // Generate procedural maze
+            val generatedGrid = MazeGenerator.generate(size, size, seed = level.toLong() * 9997L)
+            mazeGrid = generatedGrid
+            
+            // Initialize player position (entrance: top-left corner)
+            playerX = 0
+            playerY = 0
+            
+            // Exit is placed randomly and deterministically on one of the outer borders, far from (0,0)
+            val random = java.util.Random(level.toLong() * 12345L)
+            val edgeChoices = if (size >= 11) 4 else 2
+            val edge = random.nextInt(edgeChoices)
+            when (edge) {
+                0 -> { // Bottom edge
+                    exitX = size / 2 + random.nextInt(size - size / 2)
+                    exitY = size - 1
+                    generatedGrid[exitX][exitY].bottomWall = false
+                }
+                1 -> { // Right edge
+                    exitX = size - 1
+                    exitY = size / 2 + random.nextInt(size - size / 2)
+                    generatedGrid[exitX][exitY].rightWall = false
+                }
+                2 -> { // Top edge
+                    exitX = size / 2 + random.nextInt(size - size / 2)
+                    exitY = 0
+                    generatedGrid[exitX][exitY].topWall = false
+                }
+                else -> { // Left edge
+                    exitX = 0
+                    exitY = size / 2 + random.nextInt(size - size / 2)
+                    generatedGrid[exitX][exitY].leftWall = false
+                }
             }
-            1 -> { // Right edge
-                exitX = size - 1
-                exitY = size / 2 + random.nextInt(size - size / 2)
-                generatedGrid[exitX][exitY].rightWall = false
-            }
-            2 -> { // Top edge
-                exitX = size / 2 + random.nextInt(size - size / 2)
-                exitY = 0
-                generatedGrid[exitX][exitY].topWall = false
-            }
-            else -> { // Left edge
-                exitX = 0
-                exitY = size / 2 + random.nextInt(size - size / 2)
-                generatedGrid[exitX][exitY].leftWall = false
-            }
-        }
-        
-        playerTrail = listOf(Pair(0, 0))
-        levelCompleted = false
-        starsEarned = 0
-        gameTimeTicks = 0L
-        stepsTaken = 0
-        currentScore = 0
-        activeParticles = emptyList()
-        currentScreen = GameScreen.GAME_PLAY
+            
+            playerTrail = listOf(Pair(0, 0))
+            levelCompleted = false
+            starsEarned = 0
+            gameTimeTicks = 0L
+            stepsTaken = 0
+            currentScore = 0
+            activeParticles = emptyList()
+            currentScreen = GameScreen.GAME_PLAY
 
-        startTimer()
+            startTimer()
+            delay(150) // briefly hold visual fully dark for a clean visual separation
+            isTransitioning = false
+        }
     }
 
     /**
@@ -294,6 +341,7 @@ class MazeViewModel(
 
         // Verify boundaries
         if (targetX !in 0 until size || targetY !in 0 until size) {
+            triggerHapticCollision()
             SoundManager.playCollision()
             return
         }
@@ -322,6 +370,7 @@ class MazeViewModel(
             triggerHapticClick()
             SoundManager.playMove()
         } else {
+            triggerHapticCollision()
             SoundManager.playCollision()
         }
     }
@@ -425,6 +474,25 @@ class MazeViewModel(
         }
     }
 
+    private fun triggerHapticCollision() {
+        if (!hapticEnabled) return
+        try {
+            val vibrator = getApplication<Application>().getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            vibrator?.let {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    it.vibrate(android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_DOUBLE_CLICK))
+                } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    it.vibrate(android.os.VibrationEffect.createOneShot(30, 180))
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.vibrate(30)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun triggerHapticCompletion() {
         if (!hapticEnabled) return
         try {
@@ -447,6 +515,8 @@ class MazeViewModel(
      * Erases saved Room database progress.
      */
     fun resetSavedProgress() {
+        topRunsJob?.cancel()
+        topRunsForCurrentLevel = emptyList()
         viewModelScope.launch {
             repository.resetProgress()
             currentScreen = GameScreen.WELCOME

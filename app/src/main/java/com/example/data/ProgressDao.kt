@@ -24,4 +24,14 @@ interface ProgressDao {
 
     @Query("DELETE FROM level_progress")
     suspend fun clearAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRun(run: LevelRun)
+
+    @Query("SELECT * FROM level_runs WHERE level = :level ORDER BY timeMs ASC LIMIT :limit")
+    fun getTopRunsForLevel(level: Int, limit: Int = 5): Flow<List<LevelRun>>
+
+    @Query("DELETE FROM level_runs")
+    suspend fun clearAllRuns()
 }
+

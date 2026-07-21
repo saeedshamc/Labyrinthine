@@ -43,6 +43,18 @@ class ProgressRepository(private val progressDao: ProgressDao) {
             )
         )
 
+        // Insert this run into history
+        progressDao.insertRun(
+            LevelRun(
+                level = level,
+                timeMs = timeMs,
+                steps = steps,
+                score = score,
+                playerName = "You",
+                timestamp = System.currentTimeMillis()
+            )
+        )
+
         // Automatically unlock the next level
         val nextLevel = level + 1
         val nextExisting = progressDao.getProgressForLevel(nextLevel)
@@ -58,6 +70,13 @@ class ProgressRepository(private val progressDao: ProgressDao) {
                 )
             )
         }
+    }
+
+    /**
+     * Retrieves the top 5 runs for a specific level.
+     */
+    fun getTopRunsForLevel(level: Int, limit: Int = 5): Flow<List<LevelRun>> {
+        return progressDao.getTopRunsForLevel(level, limit)
     }
 
     /**
@@ -82,6 +101,7 @@ class ProgressRepository(private val progressDao: ProgressDao) {
      */
     suspend fun resetProgress() {
         progressDao.clearAll()
+        progressDao.clearAllRuns()
         initializeProgress()
     }
 }
