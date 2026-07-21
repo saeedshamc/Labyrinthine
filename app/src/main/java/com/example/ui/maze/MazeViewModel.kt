@@ -190,12 +190,32 @@ class MazeViewModel(
         playerX = 0
         playerY = 0
         
-        // Exit is placed at bottom-right corner
-        exitX = size - 1
-        exitY = size - 1
-        
-        // Carve out the physical exit door (remove outer bottom wall of the exit cell)
-        generatedGrid[exitX][exitY].bottomWall = false
+        // Exit is placed randomly and deterministically on one of the outer borders, far from (0,0)
+        val random = java.util.Random(level.toLong() * 12345L)
+        val edgeChoices = if (size >= 11) 4 else 2
+        val edge = random.nextInt(edgeChoices)
+        when (edge) {
+            0 -> { // Bottom edge
+                exitX = size / 2 + random.nextInt(size - size / 2)
+                exitY = size - 1
+                generatedGrid[exitX][exitY].bottomWall = false
+            }
+            1 -> { // Right edge
+                exitX = size - 1
+                exitY = size / 2 + random.nextInt(size - size / 2)
+                generatedGrid[exitX][exitY].rightWall = false
+            }
+            2 -> { // Top edge
+                exitX = size / 2 + random.nextInt(size - size / 2)
+                exitY = 0
+                generatedGrid[exitX][exitY].topWall = false
+            }
+            else -> { // Left edge
+                exitX = 0
+                exitY = size / 2 + random.nextInt(size - size / 2)
+                generatedGrid[exitX][exitY].leftWall = false
+            }
+        }
         
         playerTrail = listOf(Pair(0, 0))
         levelCompleted = false
@@ -244,7 +264,9 @@ class MazeViewModel(
         if (playerX == exitX && playerY == exitY) {
             val cell = grid[playerX][playerY]
             val isExiting = when {
+                dx == 0 && dy == -1 && !cell.topWall && targetY == -1 -> true
                 dx == 0 && dy == 1 && !cell.bottomWall && targetY == size -> true
+                dx == -1 && dy == 0 && !cell.leftWall && targetX == -1 -> true
                 dx == 1 && dy == 0 && !cell.rightWall && targetX == size -> true
                 else -> false
             }

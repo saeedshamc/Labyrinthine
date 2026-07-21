@@ -1,6 +1,6 @@
 {
   "name": "Labyrinth",
-  "description": "A visually stunning procedural maze game with 100+ scaling levels, smooth gesture/joystick control, bilingual Persian/English support, and Room database progress tracking.",
+  "description": "A visually stunning procedural maze game with 1000+ scaling levels, smooth gesture/joystick control, bilingual Persian/English support, and Room database progress tracking.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
